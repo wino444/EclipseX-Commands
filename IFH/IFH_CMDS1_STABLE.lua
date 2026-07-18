@@ -895,3 +895,5 @@ EO:AddCommand("namelessadmin", "โหลด Nameless-Admin", function()
 end, EO.Ranks.Normal)
 
 print("[IFH_CMDS1] ✅ โหลดคำสั่งทั้งหมดสำหรับ Identity Fraud Horror แล้ว")
+
+return true
