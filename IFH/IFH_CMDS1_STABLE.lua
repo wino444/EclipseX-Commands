@@ -83,6 +83,39 @@ EO:AddCommand("prefix", "เปลี่ยน Prefix", function(newPrefix)
     EO:Notify("EclipseX", "✅ Prefix เปลี่ยนเป็น: " .. EO.Prefix, 3)
 end, EO.Ranks.Normal)
 
+--// [!rankme]
+EO:AddCommand("rankme", "ดูยศของตัวเอง + เวลาที่เหลือ", function()
+    local realRank = EO.RankDB.GetRankByName(LocalPlayer.Name)
+    local effectiveRank = EO.SafeGetPlayerRank(LocalPlayer)
+    local rankText = effectiveRank == EO.Ranks.Owner and "👑 Owner"
+        or effectiveRank == EO.Ranks.VIP and "⭐ VIP"
+        or "👤 Normal"
+
+    local source = ""
+    local vipData = EO.TempVIP[LocalPlayer.UserId]
+    if realRank >= EO.Ranks.VIP then
+        source = "ถาวร (RankDB)"
+    elseif vipData then
+        if type(vipData) == "number" then
+            local remaining = vipData - os.time()
+            if remaining > 0 then
+                local mins = math.floor(remaining/60)
+                local secs = remaining % 60
+                source = "TempVIP ⏳ เหลือ "..(mins>0 and mins.." นาที " or "")..secs.." วิ"
+            else
+                EO.TempVIP[LocalPlayer.UserId] = nil
+                source = "TempVIP หมดอายุแล้ว"
+            end
+        else
+            source = "TempVIP ✅ (หายตอนออกเกม)"
+        end
+    else
+        source = "ไม่มีสิทธิ์พิเศษ"
+    end
+
+    EO:Notify("EclipseX", "ยศ: " .. rankText .. "\n" .. source, 6)
+end, EO.Ranks.Normal)
+
 --// [!to — วาร์ปไปหาผู้เล่น]
 EO:AddCommand("to", "วาร์ปไปหาผู้เล่น (ชื่อบางส่วน)", function(targetName)
     if not targetName or #targetName == 0 then
@@ -193,7 +226,7 @@ EO:AddCommand("bypassnojump", "บายพาสห้ามกระโดด 
     state = state and state:lower()
     if state == "on" then Features.NoJump = true elseif state == "off" then Features.NoJump = false else Features.NoJump = not Features.NoJump end
     if Features.NoJump then
-        task.spawn(function()
+        coroutine.wrap(function()
             while Features.NoJump do
                 task.wait(0.5)
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
@@ -202,7 +235,7 @@ EO:AddCommand("bypassnojump", "บายพาสห้ามกระโดด 
                     if nojump then nojump:Destroy() end
                 end
             end
-        end)
+        end)()
         EO:Notify("NoJump", "บายพาสเปิดแล้ว!", 2)
     else
         EO:Notify("NoJump", "ปิดแล้ว", 2)
@@ -841,7 +874,7 @@ EO:AddCommand("autorejoin", "เปิด/ปิด Auto Rejoin", function()
     else
         local placeId, jobId = game.PlaceId, game.JobId
         Features.AutoRejoinConn = GuiService.ErrorMessageChanged:Connect(function()
-            task.spawn(function()
+            coroutine.wrap(function()
                 if #Players:GetPlayers() <= 1 then
                     LocalPlayer:Kick("Rejoining...")
                     task.wait(1)
@@ -849,7 +882,7 @@ EO:AddCommand("autorejoin", "เปิด/ปิด Auto Rejoin", function()
                 else
                     TeleportService:TeleportToPlaceInstance(placeId, jobId, LocalPlayer)
                 end
-            end)
+            end)()
         end)
         EO:Notify("AutoRejoin", "เปิดแล้ว", 2)
     end
