@@ -1,4 +1,4 @@
---// 🌒 EclipseX Command Module — Basic Commands STABLE (Full Arsenal + UI Hunter + InfJump)
+--// 🌒 EclipseX Command Module — Basic Commands STABLE (Full Arsenal + UI Hunter + InfJump + Fixes + X-Ray)
 local EO = getgenv().EclipseOps
 if not EO or not EO.CoreLoaded then
     warn("[EclipseX] ❌ CMDS_BASIC — ต้องเรียก EO:Init() ก่อน")
@@ -24,14 +24,24 @@ local function getRoot(char)
     return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"))
 end
 
+-- ฟังก์ชันเช็คว่าเป็นตัวละครหรือไม่
+local function isCharacter(obj)
+    if obj:IsA("Model") then
+        return obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart")
+    end
+    return false
+end
+
 --// [FEATURES STATE]
 local Features = {
     FullBright = { Enabled = false, Original = {}, Connections = {} },
     NoJump = false,
     NoClip = { Enabled = false, Connection = nil },
+    NpcNoClip = { Enabled = false, Connection = nil, Objects = {} },
     UpsideDown = { Enabled = false, Conn = nil },
     TPWalk = { Enabled = false, Speed = 200, Conn = nil },
-    InfiniteJump = { Enabled = false, Conn = nil },  -- เพิ่มตรงนี้
+    InfiniteJump = { Enabled = false, Conn = nil },
+    XRay = { Enabled = false, SavedParts = {}, Connection = nil, Transparency = 0.8 },
     ESP = {
         PlayersEnabled = false,
         NPCsEnabled = false,
@@ -352,7 +362,7 @@ EO:AddCommand("to", "วาร์ปไปหาผู้เล่น (ชื่
     EO:Notify("EclipseX", "✅ วาร์ปไปหา " .. target.DisplayName .. " แล้ว!", 2)
 end, EO.Ranks.Normal)
 
-EO:AddCommand("camerafix", "Fix Camera + Unlock", function()
+EO:AddCommand("fixcamera", "Fix Camera + Unlock", function()
     Workspace.CurrentCamera:Remove()
     wait(0.1)
     repeat wait() until LocalPlayer.Character
@@ -517,6 +527,55 @@ EO:AddCommand("noclip", "NoClip [on/off]", function(state)
     end
 end, EO.Ranks.Normal)
 
+EO:AddCommand("npcnoclip", "NPC NoClip — ให้ NPC ทะลุกำแพง [on/off]", function(state)
+    state = state and state:lower()
+    local nn = Features.NpcNoClip
+    if state == "on" then nn.Enabled = true elseif state == "off" then nn.Enabled = false else nn.Enabled = not nn.Enabled end
+
+    if nn.Enabled then
+        for _, npc in Workspace:GetDescendants() do
+            if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+                for _, part in ipairs(npc:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                        table.insert(nn.Objects, part)
+                    end
+                end
+            end
+        end
+        if nn.Connection then nn.Connection:Disconnect() end
+        nn.Connection = Workspace.DescendantAdded:Connect(function(obj)
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(obj) then
+                coroutine.wrap(function()
+                    local hum = obj:WaitForChild("Humanoid", 5)
+                    local root = obj:WaitForChild("HumanoidRootPart", 5)
+                    if hum and root then
+                        for _, part in ipairs(obj:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
+                                table.insert(nn.Objects, part)
+                            end
+                        end
+                    end
+                end)()
+            end
+        end)
+        EO:Notify("NPC NoClip", "เปิดแล้ว! NPC ทะลุกำแพง 👻", 2)
+    else
+        for _, part in ipairs(nn.Objects) do
+            if part and part.Parent then
+                part.CanCollide = true
+            end
+        end
+        nn.Objects = {}
+        if nn.Connection then
+            nn.Connection:Disconnect()
+            nn.Connection = nil
+        end
+        EO:Notify("NPC NoClip", "ปิดแล้ว", 2)
+    end
+end, EO.Ranks.Normal)
+
 EO:AddCommand("speed", "ตั้ง WalkSpeed <16-500>", function(val)
     val = tonumber(val) or 16
     if val < 1 then val = 16 elseif val > 500 then val = 500 end
@@ -585,7 +644,78 @@ EO:AddCommand("tpwalk", "TPWalk <ความเร็ว/off>", function(speed)
     EO:Notify("TPWalk", "เปิดความเร็ว " .. speed, 2)
 end, EO.Ranks.Normal)
 
--- ESP ส่วนเดิม
+--// ====================== X-RAY SYSTEM ======================
+local function saveAndApplyXRay()
+    local parts = {}
+    for _, part in ipairs(Workspace:GetDescendants()) do
+        if part:IsA("BasePart") and not part:IsDescendantOf(workspace.CurrentCamera) then
+            -- ข้ามส่วนที่เป็นของตัวละครผู้เล่นทั้งหมด (ของเราและคนอื่น)
+            local parentModel = part.Parent
+            while parentModel do
+                if parentModel:IsA("Model") and isCharacter(parentModel) then
+                    -- เป็นส่วนของตัวละคร → ไม่ต้องเปลี่ยน
+                    parentModel = nil
+                    break
+                end
+                parentModel = parentModel.Parent
+            end
+            if parentModel == nil then
+                -- ไม่ใช่ตัวละคร → เก็บเข้า list
+                table.insert(parts, part)
+                part.Transparency = Features.XRay.Transparency
+            end
+        end
+    end
+    Features.XRay.SavedParts = parts
+end
+
+local function restoreXRay()
+    for _, part in ipairs(Features.XRay.SavedParts) do
+        if part and part.Parent then
+            part.Transparency = 0 -- คืนค่า default (อาจไม่ใช่ของเดิม แต่ดีที่สุด)
+        end
+    end
+    Features.XRay.SavedParts = {}
+end
+
+-- คำสั่งเปิด X-Ray
+EO:AddCommand("xray", "X-Ray — เปิดโหมดมองทะลุกำแพง", function()
+    if Features.XRay.Enabled then
+        EO:Notify("X-Ray", "เปิดอยู่แล้ว!", 2)
+        return
+    end
+    Features.XRay.Enabled = true
+    saveAndApplyXRay()
+
+    -- ป้องกันการเปลี่ยนค่ากลับจากเกม
+    if Features.XRay.Connection then Features.XRay.Connection:Disconnect() end
+    Features.XRay.Connection = RunService.Stepped:Connect(function()
+        if not Features.XRay.Enabled then return end
+        for _, part in ipairs(Features.XRay.SavedParts) do
+            if part and part.Parent and part.Transparency < 0.7 then
+                part.Transparency = Features.XRay.Transparency
+            end
+        end
+    end)
+    EO:Notify("X-Ray", "เปิดแล้ว! มองทะลุกำแพง 👁️", 3)
+end, EO.Ranks.Normal)
+
+-- คำสั่งปิด X-Ray
+EO:AddCommand("unxray", "ปิด X-Ray", function()
+    if not Features.XRay.Enabled then
+        EO:Notify("X-Ray", "ยังไม่ได้เปิด!", 2)
+        return
+    end
+    Features.XRay.Enabled = false
+    if Features.XRay.Connection then
+        Features.XRay.Connection:Disconnect()
+        Features.XRay.Connection = nil
+    end
+    restoreXRay()
+    EO:Notify("X-Ray", "ปิดแล้ว", 2)
+end, EO.Ranks.Normal)
+
+--// ====================== ESP SYSTEM (ปรับปรุงการตรวจจับ NPC เกิดใหม่) ======================
 local function createPlayerESP(plr)
     if plr == LocalPlayer then return end
     pcall(function()
@@ -606,8 +736,7 @@ local function removePlayerESP(plr)
 end
 
 local function createNPCESP(npc)
-    if not npc or not npc:FindFirstChild("HumanoidRootPart") or not npc:FindFirstChild("Humanoid") then return end
-    if Players:GetPlayerFromCharacter(npc) then return end
+    if not npc or Players:GetPlayerFromCharacter(npc) then return end
     pcall(function()
         local Text = Drawing.new("Text")
         Text.Visible = false; Text.Center = true; Text.Outline = true; Text.Font = 2; Text.Size = 19
@@ -674,15 +803,24 @@ local function updateESP()
     end
 end
 
+-- เตรียม ESP ผู้เล่น
 for _, plr in Players:GetPlayers() do createPlayerESP(plr) end
 Players.PlayerAdded:Connect(createPlayerESP)
 Players.PlayerRemoving:Connect(removePlayerESP)
+
+-- เตรียม ESP NPC
 Workspace.DescendantAdded:Connect(function(obj)
-    if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
-        wait(0.5)
-        if obj.Parent and not Players:GetPlayerFromCharacter(obj) then createNPCESP(obj) end
+    if obj:IsA("Model") and not Players:GetPlayerFromCharacter(obj) then
+        coroutine.wrap(function()
+            local hum = obj:WaitForChild("Humanoid", 10)
+            local root = obj:WaitForChild("HumanoidRootPart", 10)
+            if hum and root and obj.Parent then
+                createNPCESP(obj)
+            end
+        end)()
     end
 end)
+
 Workspace.DescendantRemoving:Connect(function(obj)
     if Features.ESP.NPCDrawings[obj] then removeNPCESP(obj) end
 end)
@@ -715,5 +853,5 @@ EO:AddCommand("espnpcs", "ESP NPC [on/off]", function(state)
     EO:Notify("ESP", "NPC " .. (Features.ESP.NPCsEnabled and "เปิด" or "ปิด"), 2)
 end, EO.Ranks.Normal)
 
-print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้งหมด (Infinite Jump, UI Hunter, ESP, NoClip...) สำเร็จ")
+print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้งหมด (X-Ray, fixcamera, npcnoclip, Infinite Jump...) สำเร็จ")
 return true
