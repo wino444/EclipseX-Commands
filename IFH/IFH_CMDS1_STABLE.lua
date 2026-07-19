@@ -1,4 +1,4 @@
---// 🌒 EclipseX Command Module — Basic Commands STABLE (Full Arsenal + UI Hunter + InfJump + Fixes + X-Ray)
+--// 🌒 EclipseX Command Module — Basic Commands STABLE (Loads UI Hunter Externally)
 local EO = getgenv().EclipseOps
 if not EO or not EO.CoreLoaded then
     warn("[EclipseX] ❌ CMDS_BASIC — ต้องเรียก EO:Init() ก่อน")
@@ -10,8 +10,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
-local UserInputService = game:GetService("UserInputService")
-local PathfindingService = game:GetService("PathfindingService")
 local LocalPlayer = Players.LocalPlayer
 
 --// [UTILS]
@@ -24,7 +22,6 @@ local function getRoot(char)
     return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"))
 end
 
--- ฟังก์ชันเช็คว่าเป็นตัวละครหรือไม่
 local function isCharacter(obj)
     if obj:IsA("Model") then
         return obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart")
@@ -32,13 +29,12 @@ local function isCharacter(obj)
     return false
 end
 
---// [FEATURES STATE]
+--// [FEATURES STATE] (ไม่มี Hunter)
 local Features = {
     FullBright = { Enabled = false, Original = {}, Connections = {} },
     NoJump = false,
     NoClip = { Enabled = false, Connection = nil },
     NpcNoClip = { Enabled = false, Connection = nil, Objects = {} },
-    UpsideDown = { Enabled = false, Conn = nil },
     TPWalk = { Enabled = false, Speed = 200, Conn = nil },
     InfiniteJump = { Enabled = false, Conn = nil },
     XRay = { Enabled = false, SavedParts = {}, Connection = nil, Transparency = 0.8 },
@@ -48,252 +44,9 @@ local Features = {
         PlayerDrawings = {},
         NPCDrawings = {},
         Loop = nil
-    },
-    NpcHunter = {
-        Speed = 20,
-        HuntV2 = false,
-        Connection = nil,
-        ActivePaths = {}
     }
 }
 getgenv().CMDS_BASIC_Features = Features
-
---// ====================== Hunter V2 Logic ======================
-local function updateHunterV2()
-    for _, npc in Workspace:GetChildren() do
-        if not npc:IsA("Model") then continue end
-        local hum = npc:FindFirstChild("Humanoid")
-        local root = npc:FindFirstChild("HumanoidRootPart")
-        if not (hum and root) or Players:GetPlayerFromCharacter(npc) then continue end
-        hum.WalkSpeed = Features.NpcHunter.Speed
-        local target, best = nil, math.huge
-        for _, plr in Players:GetPlayers() do
-            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                local d = (root.Position - plr.Character.HumanoidRootPart.Position).Magnitude
-                if d < best then best = d; target = plr end
-            end
-        end
-        if not target then continue end
-        local key = tostring(npc)
-        if not Features.NpcHunter.ActivePaths[key] or tick() - (Features.NpcHunter.ActivePaths[key].Last or 0) > 1.5 then
-            local path = PathfindingService:CreatePath({AgentRadius = 3, AgentHeight = 6, AgentCanJump = true})
-            path:ComputeAsync(root.Position, target.Character.HumanoidRootPart.Position)
-            if path.Status == Enum.PathStatus.Success then
-                Features.NpcHunter.ActivePaths[key] = {Waypoints = path:GetWaypoints(), Index = 2, Last = tick()}
-            end
-        end
-        local data = Features.NpcHunter.ActivePaths[key]
-        if data and data.Index <= #data.Waypoints then
-            local wp = data.Waypoints[data.Index]
-            hum:MoveTo(wp.Position)
-            if (root.Position - wp.Position).Magnitude < 6 then
-                data.Index += 1
-                if wp.Action == Enum.PathWaypointAction.Jump then hum.Jump = true end
-            end
-            if data.Index > #data.Waypoints then Features.NpcHunter.ActivePaths[key] = nil end
-        end
-    end
-end
-
-local function setHunterV2Enabled(state)
-    Features.NpcHunter.HuntV2 = state
-    if state then
-        if Features.NpcHunter.Connection then Features.NpcHunter.Connection:Disconnect() end
-        Features.NpcHunter.Connection = RunService.Heartbeat:Connect(updateHunterV2)
-    else
-        if Features.NpcHunter.Connection then
-            Features.NpcHunter.Connection:Disconnect()
-            Features.NpcHunter.Connection = nil
-        end
-        Features.NpcHunter.ActivePaths = {}
-    end
-end
-
---// ====================== UI Hunter ======================
-local HunterUI = nil
-
-local function createHunterUI()
-    if HunterUI then return end
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "EclipseX_HunterUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 250, 0, 120)
-    frame.Position = UDim2.new(0.5, -125, 0.3, 0)
-    frame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
-    frame.BorderSizePixel = 0
-    frame.Parent = screenGui
-
-    local frameCorner = Instance.new("UICorner")
-    frameCorner.CornerRadius = UDim.new(0, 10)
-    frameCorner.Parent = frame
-
-    local frameStroke = Instance.new("UIStroke")
-    frameStroke.Color = Color3.fromRGB(80, 0, 180)
-    frameStroke.Thickness = 2
-    frameStroke.Parent = frame
-
-    local titleBar = Instance.new("Frame")
-    titleBar.Size = UDim2.new(1, 0, 0, 30)
-    titleBar.BackgroundColor3 = Color3.fromRGB(80, 0, 180)
-    titleBar.BorderSizePixel = 0
-    titleBar.Parent = frame
-
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 10)
-    titleCorner.Parent = titleBar
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -30, 1, 0)
-    titleLabel.Position = UDim2.new(0, 10, 0, 0)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = "💀 Hunter System"
-    titleLabel.TextColor3 = Color3.new(1, 1, 1)
-    titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 14
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.Parent = titleBar
-
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -30, 0, 0)
-    closeBtn.BackgroundColor3 = Color3.fromRGB(80, 0, 0)
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.new(1, 1, 1)
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 14
-    closeBtn.Parent = titleBar
-    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
-    closeBtn.Activated:Connect(function()
-        screenGui:Destroy()
-        HunterUI = nil
-    end)
-
-    local dragging, dragStart, startPos
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
-
-    local speedLabel = Instance.new("TextLabel")
-    speedLabel.Size = UDim2.new(1, -20, 0, 20)
-    speedLabel.Position = UDim2.new(0, 10, 0, 40)
-    speedLabel.BackgroundTransparency = 1
-    speedLabel.Text = "⚡ ความเร็ว: 20"
-    speedLabel.TextColor3 = Color3.new(1, 1, 1)
-    speedLabel.Font = Enum.Font.Code
-    speedLabel.TextSize = 14
-    speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-    speedLabel.Parent = frame
-
-    local sliderBg = Instance.new("Frame")
-    sliderBg.Size = UDim2.new(1, -20, 0, 10)
-    sliderBg.Position = UDim2.new(0, 10, 0, 65)
-    sliderBg.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-    sliderBg.BorderSizePixel = 0
-    sliderBg.Parent = frame
-    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0, 5)
-
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.new(0, 20, 1, 0)
-    sliderFill.BackgroundColor3 = Color3.fromRGB(120, 0, 255)
-    sliderFill.BorderSizePixel = 0
-    sliderFill.Parent = sliderBg
-    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 5)
-
-    local sliderThumb = Instance.new("TextButton")
-    sliderThumb.Size = UDim2.new(0, 20, 0, 20)
-    sliderThumb.Position = UDim2.new(0, -10, 0.5, -10)
-    sliderThumb.BackgroundColor3 = Color3.fromRGB(200, 0, 255)
-    sliderThumb.Text = ""
-    sliderThumb.BorderSizePixel = 0
-    sliderThumb.Parent = sliderBg
-    Instance.new("UICorner", sliderThumb).CornerRadius = UDim.new(1, 0)
-
-    local function updateSliderFromPosition(input)
-        local relativeX = input.Position.X - sliderBg.AbsolutePosition.X
-        local width = sliderBg.AbsoluteSize.X
-        local percent = math.clamp(relativeX / width, 0, 1)
-        local speed = math.floor(16 + percent * (400 - 16))
-        Features.NpcHunter.Speed = speed
-        speedLabel.Text = "⚡ ความเร็ว: " .. speed
-        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        sliderThumb.Position = UDim2.new(percent, -10, 0.5, -10)
-    end
-
-    sliderThumb.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local moveConn, releaseConn
-            moveConn = UserInputService.InputChanged:Connect(function(moveInput)
-                if moveInput.UserInputType == Enum.UserInputType.MouseMovement or moveInput.UserInputType == Enum.UserInputType.Touch then
-                    updateSliderFromPosition(moveInput)
-                end
-            end)
-            releaseConn = UserInputService.InputEnded:Connect(function(endInput)
-                if endInput.UserInputType == Enum.UserInputType.MouseButton1 or endInput.UserInputType == Enum.UserInputType.Touch then
-                    moveConn:Disconnect()
-                    releaseConn:Disconnect()
-                end
-            end)
-        end
-    end)
-
-    local initialPercent = (20 - 16) / (400 - 16)
-    sliderFill.Size = UDim2.new(initialPercent, 0, 1, 0)
-    sliderThumb.Position = UDim2.new(initialPercent, -10, 0.5, -10)
-
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(1, -20, 0, 30)
-    toggleBtn.Position = UDim2.new(0, 10, 0, 85)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-    toggleBtn.Text = "HUNTER V2: OFF"
-    toggleBtn.TextColor3 = Color3.new(1, 1, 1)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.TextSize = 14
-    toggleBtn.Parent = frame
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
-
-    toggleBtn.Activated:Connect(function()
-        Features.NpcHunter.HuntV2 = not Features.NpcHunter.HuntV2
-        setHunterV2Enabled(Features.NpcHunter.HuntV2)
-        if Features.NpcHunter.HuntV2 then
-            toggleBtn.Text = "HUNTER V2: ON"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
-        else
-            toggleBtn.Text = "HUNTER V2: OFF"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-        end
-    end)
-
-    HunterUI = screenGui
-end
-
-EO:AddCommand("uihunter", "เปิด/ปิด UI Hunter System", function()
-    if HunterUI then
-        HunterUI:Destroy()
-        HunterUI = nil
-        EO:Notify("Hunter UI", "ปิดแล้ว", 2)
-    else
-        createHunterUI()
-        EO:Notify("Hunter UI", "เปิดแล้ว!", 2)
-    end
-end, EO.Ranks.Normal)
 
 --// ====================== คำสั่งพื้นฐานทั้งหมด ======================
 
@@ -424,49 +177,31 @@ EO:AddCommand("fullbright", "Fullbright [on/off]", function(state)
     end
 end, EO.Ranks.Normal)
 
-EO:AddCommand("upsidedown", "Upside Down [on/off]", function(state)
-    state = state and state:lower()
-    local ud = Features.UpsideDown
-    if state == "on" then ud.Enabled = true elseif state == "off" then ud.Enabled = false else ud.Enabled = not ud.Enabled end
-
-    if ud.Enabled then
-        local c = LocalPlayer.Character
-        if not c or not c:FindFirstChild("HumanoidRootPart") then
-            EO:Notify("UpsideDown", "❌ ตัวละครไม่พร้อม", 2)
-            return
-        end
-        local hrp0 = c:FindFirstChild("HumanoidRootPart")
-        local hrp1 = hrp0:Clone()
-        c.Parent = nil
-        hrp0.Parent = hrp1
-        hrp0.RootJoint.Part0 = nil
-        hrp1.Parent = c
-        c.Parent = Workspace
-        hrp0.Transparency = 0.5
-
-        if ud.Conn then ud.Conn:Disconnect() end
-        ud.Conn = RunService.Heartbeat:Connect(function()
-            if not ud.Enabled or not c.Parent then
-                ud.Conn:Disconnect()
-                ud.Enabled = false
-                return
-            end
-            hrp0.CFrame = hrp1.CFrame
-            hrp0.Orientation = hrp0.Orientation + Vector3.new(0, 0, 180)
-            hrp0.Position = hrp0.Position - Vector3.new(0, 1, 0)
-            hrp0.Velocity = hrp1.Velocity
-        end)
-        EO:Notify("UpsideDown", "เปิดแล้ว!", 2)
-    else
-        if ud.Conn then ud.Conn:Disconnect(); ud.Conn = nil end
-        EO:Notify("UpsideDown", "ปิดแล้ว", 2)
+EO:AddCommand("upsidedown", "Upside Down", function()
+    local c = LocalPlayer.Character
+    if not c or not c:FindFirstChild("HumanoidRootPart") then return end
+    local hrp0 = c:FindFirstChild("HumanoidRootPart")
+    local hrp1 = hrp0:Clone()
+    c.Parent = nil
+    hrp0.Parent = hrp1
+    hrp0.RootJoint.Part0 = nil
+    hrp1.Parent = c
+    c.Parent = Workspace
+    hrp0.Transparency = 0.5
+    local h = RunService.Heartbeat
+    while h:Wait() and c and c.Parent do
+        hrp0.CFrame = hrp1.CFrame
+        hrp0.Orientation = hrp0.Orientation + Vector3.new(0, 0, 180)
+        hrp0.Position = hrp0.Position - Vector3.new(0, 1, 0)
+        hrp0.Velocity = hrp1.Velocity
     end
 end, EO.Ranks.Normal)
 
 EO:AddCommand("unupsidedown", "ปิด Upside Down", function()
-    Features.UpsideDown.Enabled = false
-    if Features.UpsideDown.Conn then Features.UpsideDown.Conn:Disconnect(); Features.UpsideDown.Conn = nil end
-    EO:Notify("UpsideDown", "ปิดแล้ว", 2)
+    if LocalPlayer.Character then
+        LocalPlayer.Character:BreakJoints()
+    end
+    EO:Notify("UpsideDown", "ปิดแล้ว (เกิดใหม่)", 2)
 end, EO.Ranks.Normal)
 
 EO:AddCommand("nojumpbypass", "Bypass No-Jump [on/off]", function(state)
@@ -649,18 +384,15 @@ local function saveAndApplyXRay()
     local parts = {}
     for _, part in ipairs(Workspace:GetDescendants()) do
         if part:IsA("BasePart") and not part:IsDescendantOf(workspace.CurrentCamera) then
-            -- ข้ามส่วนที่เป็นของตัวละครผู้เล่นทั้งหมด (ของเราและคนอื่น)
             local parentModel = part.Parent
             while parentModel do
                 if parentModel:IsA("Model") and isCharacter(parentModel) then
-                    -- เป็นส่วนของตัวละคร → ไม่ต้องเปลี่ยน
                     parentModel = nil
                     break
                 end
                 parentModel = parentModel.Parent
             end
             if parentModel == nil then
-                -- ไม่ใช่ตัวละคร → เก็บเข้า list
                 table.insert(parts, part)
                 part.Transparency = Features.XRay.Transparency
             end
@@ -672,13 +404,12 @@ end
 local function restoreXRay()
     for _, part in ipairs(Features.XRay.SavedParts) do
         if part and part.Parent then
-            part.Transparency = 0 -- คืนค่า default (อาจไม่ใช่ของเดิม แต่ดีที่สุด)
+            part.Transparency = 0
         end
     end
     Features.XRay.SavedParts = {}
 end
 
--- คำสั่งเปิด X-Ray
 EO:AddCommand("xray", "X-Ray — เปิดโหมดมองทะลุกำแพง", function()
     if Features.XRay.Enabled then
         EO:Notify("X-Ray", "เปิดอยู่แล้ว!", 2)
@@ -687,7 +418,6 @@ EO:AddCommand("xray", "X-Ray — เปิดโหมดมองทะลุ�
     Features.XRay.Enabled = true
     saveAndApplyXRay()
 
-    -- ป้องกันการเปลี่ยนค่ากลับจากเกม
     if Features.XRay.Connection then Features.XRay.Connection:Disconnect() end
     Features.XRay.Connection = RunService.Stepped:Connect(function()
         if not Features.XRay.Enabled then return end
@@ -700,7 +430,6 @@ EO:AddCommand("xray", "X-Ray — เปิดโหมดมองทะลุ�
     EO:Notify("X-Ray", "เปิดแล้ว! มองทะลุกำแพง 👁️", 3)
 end, EO.Ranks.Normal)
 
--- คำสั่งปิด X-Ray
 EO:AddCommand("unxray", "ปิด X-Ray", function()
     if not Features.XRay.Enabled then
         EO:Notify("X-Ray", "ยังไม่ได้เปิด!", 2)
@@ -715,7 +444,7 @@ EO:AddCommand("unxray", "ปิด X-Ray", function()
     EO:Notify("X-Ray", "ปิดแล้ว", 2)
 end, EO.Ranks.Normal)
 
---// ====================== ESP SYSTEM (ปรับปรุงการตรวจจับ NPC เกิดใหม่) ======================
+--// ====================== ESP SYSTEM ======================
 local function createPlayerESP(plr)
     if plr == LocalPlayer then return end
     pcall(function()
@@ -803,12 +532,10 @@ local function updateESP()
     end
 end
 
--- เตรียม ESP ผู้เล่น
 for _, plr in Players:GetPlayers() do createPlayerESP(plr) end
 Players.PlayerAdded:Connect(createPlayerESP)
 Players.PlayerRemoving:Connect(removePlayerESP)
 
--- เตรียม ESP NPC
 Workspace.DescendantAdded:Connect(function(obj)
     if obj:IsA("Model") and not Players:GetPlayerFromCharacter(obj) then
         coroutine.wrap(function()
@@ -853,5 +580,29 @@ EO:AddCommand("espnpcs", "ESP NPC [on/off]", function(state)
     EO:Notify("ESP", "NPC " .. (Features.ESP.NPCsEnabled and "เปิด" or "ปิด"), 2)
 end, EO.Ranks.Normal)
 
-print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้งหมด (X-Ray, fixcamera, npcnoclip, Infinite Jump...) สำเร็จ")
+--// ====================== UI Hunter (External Load) ======================
+local HUNTER_URL = "https://raw.githubusercontent.com/wino444/EclipseX-Commands/main/IFH/IFH_UI_HUNTER.lua"
+
+EO:AddCommand("uihunter", "เปิด/ปิด UI Hunter (โหลดภายนอก)", function()
+    -- ถ้ายังไม่เคยโหลดโมดูล → โหลดจาก GitHub ก่อน
+    if not EO.ModulesLoaded["IFH_UI_HUNTER"] then
+        EO:Notify("UI Hunter", "กำลังโหลดระบบ... ⏳", 2)
+        local success = EO:LoadModule("IFH_UI_HUNTER", HUNTER_URL)
+        if not success then
+            EO:Notify("UI Hunter", "❌ โหลดไม่สำเร็จ!", 3)
+            return
+        end
+        wait(0.3) -- รอให้โค้ดในโมดูลทำงานและสร้าง Toggle function
+    end
+
+    -- เรียกฟังก์ชัน Toggle (สร้างโดย IFH_UI_HUNTER.lua)
+    local toggle = getgenv().IFH_UI_HUNTER_Toggle
+    if toggle then
+        toggle()
+    else
+        EO:Notify("UI Hunter", "❌ ไม่พบระบบ Toggle", 2)
+    end
+end, EO.Ranks.Normal)
+
+print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้งหมด (UI Hunter ภายนอก) สำเร็จ")
 return true
