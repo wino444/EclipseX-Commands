@@ -1,4 +1,4 @@
---// 🌒 EclipseX Command Module — Basic Commands STABLE
+--// 🌒 EclipseX Command Module — Basic Commands STABLE (Full Arsenal)
 local EO = getgenv().EclipseOps
 if not EO or not EO.CoreLoaded then
     warn("[EclipseX] ❌ CMDS_BASIC — ต้องเรียก EO:Init() ก่อน")
@@ -17,11 +17,27 @@ local function printDebug(...)
     if EO.EODebug then print("[CMDS_BASIC DEBUG]", ...) end
 end
 
+local function getRoot(char)
+    char = char or LocalPlayer.Character
+    return char and (char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"))
+end
+
 --// [FEATURES STATE]
 local Features = {
     FullBright = { Enabled = false, Original = {}, Connections = {} },
     NoJump = false,
+    NoClip = { Enabled = false, Connection = nil },
+    UpsideDown = { Enabled = false, Conn = nil },
+    TPWalk = { Enabled = false, Speed = 200, Conn = nil },
+    ESP = {
+        PlayersEnabled = false,
+        NPCsEnabled = false,
+        PlayerDrawings = {},
+        NPCDrawings = {},
+        Loop = nil
+    }
 }
+getgenv().CMDS_BASIC_Features = Features
 
 --// ====================== [!prefix] ======================
 EO:AddCommand("prefix", "เปลี่ยน Prefix", function(newPrefix)
@@ -66,7 +82,7 @@ EO:AddCommand("rankme", "ดูยศของตัวเอง + เวลา�
     EO:Notify("EclipseX", "ยศ: " .. rankText .. "\n" .. source, 6)
 end, EO.Ranks.Normal)
 
---// ====================== [!to] — วาร์ปไปหาผู้เล่น ======================
+--// ====================== [!to] ======================
 EO:AddCommand("to", "วาร์ปไปหาผู้เล่น (ชื่อบางส่วน)", function(targetName)
     if not targetName or #targetName == 0 then
         EO:Notify("EclipseX", "❌ ระบุชื่อผู้เล่น!", 3); return
@@ -91,11 +107,11 @@ EO:AddCommand("to", "วาร์ปไปหาผู้เล่น (ชื่
     EO:Notify("EclipseX", "✅ วาร์ปไปหา " .. target.DisplayName .. " แล้ว!", 2)
 end, EO.Ranks.Normal)
 
---// ====================== [!camerafix] — Fix Camera + Unlock ======================
-EO:AddCommand("camerafix", "Fix Camera + Unlock — ซ่อมกล้อง + ปลดล็อค", function()
+--// ====================== [!camerafix] ======================
+EO:AddCommand("camerafix", "Fix Camera + Unlock", function()
     Workspace.CurrentCamera:Remove()
-    task.wait(0.1)
-    repeat task.wait() until LocalPlayer.Character
+    wait(0.1)
+    repeat wait() until LocalPlayer.Character
     local cam = Workspace.CurrentCamera
     cam.CameraSubject = LocalPlayer.Character:FindFirstChildWhichIsA("Humanoid")
     cam.CameraType = Enum.CameraType.Custom
@@ -109,7 +125,7 @@ EO:AddCommand("camerafix", "Fix Camera + Unlock — ซ่อมกล้อง 
 end, EO.Ranks.Normal)
 
 --// ====================== [!fullbright] ======================
-EO:AddCommand("fullbright", "Fullbright — เปิด/ปิด Fullbright [on/off]", function(state)
+EO:AddCommand("fullbright", "Fullbright [on/off]", function(state)
     state = state and state:lower()
     local fb = Features.FullBright
     if state == "on" then fb.Enabled = true elseif state == "off" then fb.Enabled = false else fb.Enabled = not fb.Enabled end
@@ -155,35 +171,60 @@ EO:AddCommand("fullbright", "Fullbright — เปิด/ปิด Fullbright [o
     end
 end, EO.Ranks.Normal)
 
---// ====================== [!upsidedown] ======================
-EO:AddCommand("upsidedown", "Upside Down", function()
-    local c = LocalPlayer.Character
-    if not c or not c:FindFirstChild("HumanoidRootPart") then return end
-    local hrp0 = c:FindFirstChild("HumanoidRootPart")
-    local hrp1 = hrp0:Clone()
-    c.Parent = nil
-    hrp0.Parent = hrp1
-    hrp0.RootJoint.Part0 = nil
-    hrp1.Parent = c
-    c.Parent = Workspace
-    hrp0.Transparency = 0.5
-    local h = RunService.Heartbeat
-    while h:Wait() and c and c.Parent do
-        hrp0.CFrame = hrp1.CFrame
-        hrp0.Orientation = hrp0.Orientation + Vector3.new(0, 0, 180)
-        hrp0.Position = hrp0.Position - Vector3.new(0, 1, 0)
-        hrp0.Velocity = hrp1.Velocity
+--// ====================== [!upsidedown] / [!unupsidedown] ======================
+EO:AddCommand("upsidedown", "Upside Down [on/off]", function(state)
+    state = state and state:lower()
+    local ud = Features.UpsideDown
+    if state == "on" then ud.Enabled = true elseif state == "off" then ud.Enabled = false else ud.Enabled = not ud.Enabled end
+
+    if ud.Enabled then
+        local c = LocalPlayer.Character
+        if not c or not c:FindFirstChild("HumanoidRootPart") then
+            EO:Notify("UpsideDown", "❌ ตัวละครไม่พร้อม", 2)
+            return
+        end
+        local hrp0 = c:FindFirstChild("HumanoidRootPart")
+        local hrp1 = hrp0:Clone()
+        c.Parent = nil
+        hrp0.Parent = hrp1
+        hrp0.RootJoint.Part0 = nil
+        hrp1.Parent = c
+        c.Parent = Workspace
+        hrp0.Transparency = 0.5
+
+        if ud.Conn then ud.Conn:Disconnect() end
+        ud.Conn = RunService.Heartbeat:Connect(function()
+            if not ud.Enabled or not c.Parent then
+                ud.Conn:Disconnect()
+                ud.Enabled = false
+                return
+            end
+            hrp0.CFrame = hrp1.CFrame
+            hrp0.Orientation = hrp0.Orientation + Vector3.new(0, 0, 180)
+            hrp0.Position = hrp0.Position - Vector3.new(0, 1, 0)
+            hrp0.Velocity = hrp1.Velocity
+        end)
+        EO:Notify("UpsideDown", "เปิดแล้ว!", 2)
+    else
+        if ud.Conn then ud.Conn:Disconnect(); ud.Conn = nil end
+        EO:Notify("UpsideDown", "ปิดแล้ว", 2)
     end
 end, EO.Ranks.Normal)
 
---// ====================== [!nojumpbypass] — Bypass No-Jump (Remove NoJump) ======================
-EO:AddCommand("nojumpbypass", "Bypass No-Jump — บายพาสห้ามกระโดด [on/off]", function(state)
+EO:AddCommand("unupsidedown", "ปิด Upside Down", function()
+    Features.UpsideDown.Enabled = false
+    if Features.UpsideDown.Conn then Features.UpsideDown.Conn:Disconnect(); Features.UpsideDown.Conn = nil end
+    EO:Notify("UpsideDown", "ปิดแล้ว", 2)
+end, EO.Ranks.Normal)
+
+--// ====================== [!nojumpbypass] ======================
+EO:AddCommand("nojumpbypass", "Bypass No-Jump [on/off]", function(state)
     state = state and state:lower()
     if state == "on" then Features.NoJump = true elseif state == "off" then Features.NoJump = false else Features.NoJump = not Features.NoJump end
     if Features.NoJump then
         coroutine.wrap(function()
             while Features.NoJump do
-                task.wait(0.5)
+                wait(0.5)
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 if char then
                     local nojump = char:FindFirstChild("NoJump") or Workspace:FindFirstChild("NoJump")
@@ -197,6 +238,242 @@ EO:AddCommand("nojumpbypass", "Bypass No-Jump — บายพาสห้าม
     end
 end, EO.Ranks.Normal)
 
-print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้ง 7 ตัวสำเร็จ")
+--// ====================== [!noclip] ======================
+EO:AddCommand("noclip", "NoClip [on/off]", function(state)
+    state = state and state:lower()
+    local nc = Features.NoClip
+    if state == "on" then nc.Enabled = true elseif state == "off" then nc.Enabled = false else nc.Enabled = not nc.Enabled end
 
+    if nc.Enabled then
+        local function enableNoclip()
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end
+        enableNoclip()
+        if nc.Connection then nc.Connection:Disconnect() end
+        nc.Connection = RunService.Stepped:Connect(function()
+            if not nc.Enabled then return end
+            if LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+                end
+            end
+        end)
+        LocalPlayer.CharacterAdded:Connect(function()
+            if nc.Enabled then wait(0.1); enableNoclip() end
+        end)
+        EO:Notify("NoClip", "เปิดแล้ว! ทะลุกำแพง 💨", 2)
+    else
+        if nc.Connection then nc.Connection:Disconnect(); nc.Connection = nil end
+        if LocalPlayer.Character then
+            for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then part.CanCollide = true end
+            end
+        end
+        EO:Notify("NoClip", "ปิดแล้ว", 2)
+    end
+end, EO.Ranks.Normal)
+
+--// ====================== [!speed] ======================
+EO:AddCommand("speed", "ตั้ง WalkSpeed <16-500>", function(val)
+    val = tonumber(val) or 16
+    if val < 1 then val = 16 elseif val > 500 then val = 500 end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.WalkSpeed = val
+        EO:Notify("Speed", "WalkSpeed = " .. val, 2)
+    else
+        EO:Notify("Speed", "❌ ตัวละครไม่พร้อม", 2)
+    end
+end, EO.Ranks.Normal)
+
+--// ====================== [!jump] ======================
+EO:AddCommand("jump", "ตั้ง JumpPower <50-400>", function(val)
+    val = tonumber(val) or 50
+    if val < 0 then val = 50 elseif val > 400 then val = 400 end
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        char.Humanoid.JumpPower = val
+        EO:Notify("Jump", "JumpPower = " .. val, 2)
+    else
+        EO:Notify("Jump", "❌ ตัวละครไม่พร้อม", 2)
+    end
+end, EO.Ranks.Normal)
+
+--// ====================== [!tpwalk] ======================
+EO:AddCommand("tpwalk", "TPWalk <ความเร็ว/off>", function(speed)
+    if speed == "off" then
+        Features.TPWalk.Enabled = false
+        if Features.TPWalk.Conn then Features.TPWalk.Conn:Disconnect(); Features.TPWalk.Conn = nil end
+        EO:Notify("TPWalk", "ปิดแล้ว", 2)
+        return
+    end
+    speed = tonumber(speed) or 200
+    Features.TPWalk.Speed = speed
+    Features.TPWalk.Enabled = true
+    if Features.TPWalk.Conn then Features.TPWalk.Conn:Disconnect() end
+    Features.TPWalk.Conn = RunService.Stepped:Connect(function(_, delta)
+        if Features.TPWalk.Enabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            local hum = LocalPlayer.Character.Humanoid
+            if hum.MoveDirection.Magnitude > 0 then
+                LocalPlayer.Character:TranslateBy(hum.MoveDirection * Features.TPWalk.Speed * delta)
+            end
+        end
+    end)
+    EO:Notify("TPWalk", "เปิดความเร็ว " .. speed, 2)
+end, EO.Ranks.Normal)
+
+--// ====================== ESP SYSTEM ======================
+local function createPlayerESP(plr)
+    if plr == LocalPlayer then return end
+    pcall(function()
+        local Text = Drawing.new("Text")
+        Text.Visible = false; Text.Center = true; Text.Outline = true; Text.Font = 2; Text.Size = 18
+        Text.Color = Color3.fromRGB(255, 50, 50); Text.OutlineColor = Color3.new(0,0,0)
+        Features.ESP.PlayerDrawings[plr] = Text
+    end)
+end
+
+local function removePlayerESP(plr)
+    pcall(function()
+        if Features.ESP.PlayerDrawings[plr] then
+            Features.ESP.PlayerDrawings[plr]:Remove()
+            Features.ESP.PlayerDrawings[plr] = nil
+        end
+    end)
+end
+
+local function createNPCESP(npc)
+    if not npc or not npc:FindFirstChild("HumanoidRootPart") or not npc:FindFirstChild("Humanoid") then return end
+    if Players:GetPlayerFromCharacter(npc) then return end
+    pcall(function()
+        local Text = Drawing.new("Text")
+        Text.Visible = false; Text.Center = true; Text.Outline = true; Text.Font = 2; Text.Size = 19
+        Text.Color = Color3.fromRGB(0, 191, 255); Text.OutlineColor = Color3.new(0,0,0)
+        Features.ESP.NPCDrawings[npc] = Text
+    end)
+end
+
+local function removeNPCESP(npc)
+    pcall(function()
+        if Features.ESP.NPCDrawings[npc] then
+            Features.ESP.NPCDrawings[npc]:Remove()
+            Features.ESP.NPCDrawings[npc] = nil
+        end
+    end)
+end
+
+local function updateESP()
+    local myRoot = getRoot()
+    if not myRoot then return end
+    local myPos = myRoot.Position
+    local cam = Workspace.CurrentCamera
+
+    if Features.ESP.PlayersEnabled then
+        for plr, drawing in pairs(Features.ESP.PlayerDrawings) do
+            pcall(function()
+                if plr.Character and plr.Character:FindFirstChild("Head") and plr.Character:FindFirstChild("HumanoidRootPart") then
+                    local headPos = plr.Character.Head.Position + Vector3.new(0, 3, 0)
+                    local vector, onScreen = cam:WorldToViewportPoint(headPos)
+                    local dist = math.floor((myPos - plr.Character.HumanoidRootPart.Position).Magnitude)
+                    if onScreen and dist < 1000 then
+                        drawing.Visible = true
+                        drawing.Text = "👤 " .. plr.Name .. "\n[" .. dist .. " studs]"
+                        drawing.Position = Vector2.new(vector.X, vector.Y)
+                    else
+                        drawing.Visible = false
+                    end
+                else
+                    drawing.Visible = false
+                end
+            end)
+        end
+    else
+        for _, drawing in pairs(Features.ESP.PlayerDrawings) do
+            pcall(function() drawing.Visible = false end)
+        end
+    end
+
+    if Features.ESP.NPCsEnabled then
+        for npc, drawing in pairs(Features.ESP.NPCDrawings) do
+            pcall(function()
+                if npc.Parent and npc:FindFirstChild("HumanoidRootPart") and npc:FindFirstChild("Humanoid") and npc.Humanoid.Health > 0 then
+                    local root = npc.HumanoidRootPart
+                    local headPos = root.Position + Vector3.new(0, 3.5, 0)
+                    local vector, onScreen = cam:WorldToViewportPoint(headPos)
+                    local dist = math.floor((myPos - root.Position).Magnitude)
+                    if onScreen and dist < 1000 then
+                        drawing.Visible = true
+                        drawing.Text = "🩸 " .. (npc.Name:gsub("%.$","")) .. "\n[" .. dist .. " studs]"
+                        drawing.Position = Vector2.new(vector.X, vector.Y)
+                    else
+                        drawing.Visible = false
+                    end
+                else
+                    drawing.Visible = false
+                    if not npc.Parent then removeNPCESP(npc) end
+                end
+            end)
+        end
+    else
+        for _, drawing in pairs(Features.ESP.NPCDrawings) do
+            pcall(function() drawing.Visible = false end)
+        end
+    end
+end
+
+-- เตรียม ESP ผู้เล่น
+for _, plr in Players:GetPlayers() do createPlayerESP(plr) end
+Players.PlayerAdded:Connect(createPlayerESP)
+Players.PlayerRemoving:Connect(removePlayerESP)
+
+-- เตรียม ESP NPC
+Workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") then
+        wait(0.5)
+        if obj.Parent and not Players:GetPlayerFromCharacter(obj) then createNPCESP(obj) end
+    end
+end)
+Workspace.DescendantRemoving:Connect(function(obj)
+    if Features.ESP.NPCDrawings[obj] then removeNPCESP(obj) end
+end)
+
+--// ====================== [!espplayers] ======================
+EO:AddCommand("espplayers", "ESP ผู้เล่น [on/off]", function(state)
+    state = state and state:lower()
+    if state == "on" then Features.ESP.PlayersEnabled = true elseif state == "off" then Features.ESP.PlayersEnabled = false else Features.ESP.PlayersEnabled = not Features.ESP.PlayersEnabled end
+    if Features.ESP.PlayersEnabled or Features.ESP.NPCsEnabled then
+        if not Features.ESP.Loop then Features.ESP.Loop = RunService.RenderStepped:Connect(updateESP) end
+    else
+        if Features.ESP.Loop then Features.ESP.Loop:Disconnect(); Features.ESP.Loop = nil end
+    end
+    EO:Notify("ESP", "ผู้เล่น " .. (Features.ESP.PlayersEnabled and "เปิด" or "ปิด"), 2)
+end, EO.Ranks.Normal)
+
+--// ====================== [!espnpcs] ======================
+EO:AddCommand("espnpcs", "ESP NPC [on/off]", function(state)
+    state = state and state:lower()
+    if state == "on" then Features.ESP.NPCsEnabled = true elseif state == "off" then Features.ESP.NPCsEnabled = false else Features.ESP.NPCsEnabled = not Features.ESP.NPCsEnabled end
+    if Features.ESP.NPCsEnabled then
+        for _, obj in Workspace:GetDescendants() do
+            if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and not Players:GetPlayerFromCharacter(obj) then
+                createNPCESP(obj)
+            end
+        end
+        if not Features.ESP.Loop then Features.ESP.Loop = RunService.RenderStepped:Connect(updateESP) end
+    else
+        for _, drawing in pairs(Features.ESP.NPCDrawings) do
+            pcall(function() drawing.Visible = false end)
+        end
+        if not Features.ESP.PlayersEnabled and Features.ESP.Loop then
+            Features.ESP.Loop:Disconnect(); Features.ESP.Loop = nil
+        end
+    end
+    EO:Notify("ESP", "NPC " .. (Features.ESP.NPCsEnabled and "เปิด" or "ปิด"), 2)
+end, EO.Ranks.Normal)
+
+print("[CMDS_BASIC] ✅ โหลดคำสั่งพื้นฐานทั้งหมด (NoClip, Speed, Jump, ESP, TPWalk, UpsideDown) สำเร็จ")
 return true
