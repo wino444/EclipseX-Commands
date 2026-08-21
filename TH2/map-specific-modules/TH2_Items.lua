@@ -12,37 +12,37 @@ end
 
 -- 🥤 หมวดเครื่องดื่ม
 Collector:RegisterCategory("🥤 Drinks", {
-    { Name = "Bloxy Soda",      Method = "fireclickdetector", Data = Vector3.new(-16.6033745, 176.402084, 238.670059),  RequiredTeam = "Citizen" },
-    { Name = "Bottle of water", Method = "fireclickdetector", Data = Vector3.new(377.602631,  168.262573, 52.0672989),  RequiredTeam = "Citizen" },
+    { Name = "Bloxy Soda",      Method = "fireclickdetector", Data = Vector3.new(398.939087, 167.176117, 42.1815681, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086),  RequiredTeam = "Citizen" },
+    { Name = "Bottle of water", Method = "fireclickdetector", Data = Vector3.new(-35.8496094, 178.114868, 236.537445, 1, 0, 0, 0, 1, 0, 0, 0, 1),  RequiredTeam = "Citizen" },
 })
 
 -- 🍜 หมวดอาหาร
 Collector:RegisterCategory("🍜 Food", {
-    { Name = "Tom Yum Kung",                Method = "fireclickdetector", Data = Vector3.new(-20.3787384, 176.47052,  238.670151), RequiredTeam = "Citizen" },
-    { Name = "Somtum",                      Method = "fireclickdetector", Data = Vector3.new(-24.717041,  176.47052,  238.670181), RequiredTeam = "Citizen" },
-    { Name = "Fried Rice",                  Method = "fireclickdetector", Data = Vector3.new(-29.7084618, 176.47052,  238.670105), RequiredTeam = "Citizen" },
-    { Name = "Grilled Fish Veg & Peppers",  Method = "fireclickdetector", Data = Vector3.new(-34.7852478, 176.47052,  238.670105), RequiredTeam = "Citizen" },
-    { Name = "Bok Choy Oyster Sauce",       Method = "fireclickdetector", Data = Vector3.new(-39.5275421, 176.47052,  238.670135), RequiredTeam = "Citizen" },
-    { Name = "Girlled Pork",                Method = "fireclickdetector", Data = Vector3.new(94.905777,   176.677673, 201.630219), RequiredTeam = "Citizen" },
-    { Name = "Chinese steamed dumpling",    Method = "fireclickdetector", Data = Vector3.new(352.308319,  168.292404, 57.0718842), RequiredTeam = "Citizen" },
-    { Name = "Steamed stuff bun",           Method = "fireclickdetector", Data = Vector3.new(353.84494,   170.15239,  58.0895691), RequiredTeam = "Citizen" },
-    { Name = "Sausage",                     Method = "fireclickdetector", Data = Vector3.new(353.84491,   171.292389, 58.0895615), RequiredTeam = "Citizen" },
-    { Name = "LazyChip",                    Method = "fireclickdetector", Data = Vector3.new(370.129761,  168.250732, 43.9998932), RequiredTeam = "Citizen" },
+    { Name = "Tom Yum Kung",                Method = "fireclickdetector", Data = Vector3.new(396.719818, 167.244568, 45.2357788, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086), RequiredTeam = "Citizen" },
+    { Name = "Somtum",                      Method = "fireclickdetector", Data = Vector3.new(394.169647, 167.244553, 48.7453537, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086), RequiredTeam = "Citizen" },
+    { Name = "Fried Rice",                  Method = "fireclickdetector", Data = Vector3.new(391.235413, 167.244568, 52.7832603, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086), RequiredTeam = "Citizen" },
+    { Name = "Grilled fish vegetables and peppers",  Method = "fireclickdetector", Data = Vector3.new(388.251038, 167.244568, 56.8902512, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086), RequiredTeam = "Citizen" },
+    { Name = "Bok Choy Oyster Sauce",       Method = "fireclickdetector", Data = Vector3.new(385.463379, 167.244568, 60.7266884, 0.587827086, 0, 0.808986604, 0, 1, 0, -0.808986604, 0, 0.587827086), RequiredTeam = "Citizen" },
+    { Name = "Girlled Pork",                Method = "fireclickdetector", Data = Vector3.new(94.905777, 176.677673, 201.630219, 1, 0, 0, 0, 1, 0, 0, 0, 1), RequiredTeam = "Citizen" },
+    { Name = "Chinese steamed dumpling",    Method = "fireclickdetector", Data = Vector3.new(-54.7672348, 178.144699, 219.016937, 0, 0, -1, 0, 1, 0, 1, 0, 0), RequiredTeam = "Citizen" },
+    { Name = "Steamed stuff bun",           Method = "fireclickdetector", Data = Vector3.new(-54.687233, 180.004684, 220.858276, 0, 0, -1, 0, 1, 0, 1, 0, 0), RequiredTeam = "Citizen" },
+    { Name = "Sausage",                     Method = "fireclickdetector", Data = Vector3.new(-54.6872482, 181.144684, 220.858246, 0, 0, -1, 0, 1, 0, 1, 0, 0), RequiredTeam = "Citizen" },
+    { Name = "LazyChip",                    Method = "fireclickdetector", Data = Vector3.new(-33.7161102, 178.103027, 225.749756, 1, 0, 0, 0, 1, 0, 0, 0, 1), RequiredTeam = "Citizen" },
 })
 
 -- 🔫 หมวดอาวุธ
 Collector:RegisterCategory("🔫 Guns", {
     { Name = "M4",      Method = "fireclickdetector", Data = Vector3.new(420.693115,  167.687271, 253.479202), RequiredTeam = "Citizen" },
-    { Name = "Revolver",Method = "fireclickdetector", Data = Vector3.new(-34.4966202, 176.234924, 242.627151), RequiredTeam = "Citizen" },
+    { Name = "Revolver",Method = "fireclickdetector", Data = Vector3.new(483.952637, 167.630722, 497.549255, 0.999394894, 0, 0.0347825065, 0, 1, 0, -0.0347825065, 0, 0.999394894), RequiredTeam = "Citizen" },
     { Name = "Gun",     Method = "fireclickdetector", Data = Vector3.new(-76.836731,  162.669846, 231.239838), RequiredTeam = "Citizen" },
 })
 
 -- 🚗 หมวดยานพาหนะ
 Collector:RegisterCategory("🚗 Vehicles", {
-    { Name = "Elitoria RZ750", Method = "fireclickdetector", Data = Vector3.new(380.279816, 168.692368, -188.027039), RequiredTeam = "Citizen" },
-    { Name = "Elitoria RN750", Method = "fireclickdetector", Data = Vector3.new(396.658813, 168.824295, -193.825867), RequiredTeam = "Citizen" },
-    { Name = "Eltoria RX750",  Method = "fireclickdetector", Data = Vector3.new(410.445068, 168.824249, -198.706772), RequiredTeam = "Citizen" },
-    { Name = "Eltoria RS750",  Method = "fireclickdetector", Data = Vector3.new(403.252167, 168.824295, -214.287613), RequiredTeam = "Citizen" },
+    { Name = "Elitoria RZ750", Method = "fireclickdetector", Data = Vector3.new(460.338776, 200.698547, -240.407883, 0.905360103, -0, -0.424644619, 0, 1, -0, 0.424644619, 0, 0.905360103), RequiredTeam = "Citizen" },
+    { Name = "Elitoria RN750", Method = "fireclickdetector", Data = Vector3.new(476.06958, 200.830475, -233.029388, 0.905360103, -0, -0.424644619, 0, 1, -0, 0.424644619, 0, 0.905360103), RequiredTeam = "Citizen" },
+    { Name = "Eltoria RX750",  Method = "fireclickdetector", Data = Vector3.new(489.310272, 200.830429, -226.81897, 0.905360103, -0, -0.424644619, 0, 1, -0, 0.424644619, 0, 0.905360103), RequiredTeam = "Citizen" },
+    { Name = "Eltoria RS750",  Method = "fireclickdetector", Data = Vector3.new(495.135864, 200.830475, -242.960953, 0.424632013, 0, 0.905366063, 0, 1, 0, -0.905366063, 0, 0.424632013), RequiredTeam = "Citizen" },
     { Name = "Police Car",     Method = "fireclickdetector", Data = Vector3.new(210.850082, 175.298798, 216.522522),  RequiredTeam = "Police" },
 })
 
@@ -56,13 +56,13 @@ Collector:RegisterCategory("🛕 Temple", {
 
 -- 💡 หมวดไฟเวที
 Collector:RegisterCategory("💡 Performance", {
-    { Name = "BlueLight",   Method = "fireclickdetector", Data = Vector3.new(70.807457,  133.054077, 128.421112), RequiredTeam = "Citizen" },
-    { Name = "WhiteLight",  Method = "fireclickdetector", Data = Vector3.new(68.0905838, 132.744095, 127.743759), RequiredTeam = "Citizen" },
-    { Name = "GreenLight",  Method = "fireclickdetector", Data = Vector3.new(65.0826492, 132.654083, 126.993896), RequiredTeam = "Citizen" },
-    { Name = "YellowLight", Method = "fireclickdetector", Data = Vector3.new(62.0747185, 132.854065, 126.244034), RequiredTeam = "Citizen" },
-    { Name = "RedLight",    Method = "fireclickdetector", Data = Vector3.new(58.8726921, 133.054077, 125.445786), RequiredTeam = "Citizen" },
-    { Name = "PinkLight",   Method = "fireclickdetector", Data = Vector3.new(70.9044571, 128.944092, 128.445267), RequiredTeam = "Citizen" },
-    { Name = "VioletLight", Method = "fireclickdetector", Data = Vector3.new(67.7024612, 129.054047, 127.647003), RequiredTeam = "Citizen" },
+    { Name = "BlueLight",   Method = "fireclickdetector", Data = Vector3.new(-197.713409, 180.987183, 155.59375, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "WhiteLight",  Method = "fireclickdetector", Data = Vector3.new(-198.006058, 180.6772, 152.809052, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "GreenLight",  Method = "fireclickdetector", Data = Vector3.new(-198.330139, 180.587189, 149.726044, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "YellowLight", Method = "fireclickdetector", Data = Vector3.new(-198.654205, 180.78717, 146.643036, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "RedLight",    Method = "fireclickdetector", Data = Vector3.new(-198.999176, 180.987183, 143.361099, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "PinkLight",   Method = "fireclickdetector", Data = Vector3.new(-197.702942, 176.877182, 155.693161, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
+    { Name = "VioletLight", Method = "fireclickdetector", Data = Vector3.new(-198.047882, 176.987137, 152.411255, 0.10454309, -0, -0.994520426, 0, 1, -0, 0.994520426, 0, 0.10454309), RequiredTeam = "Citizen" },
 })
 
 -- 🛠️ หมวดอื่น ๆ
