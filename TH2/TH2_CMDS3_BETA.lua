@@ -95,11 +95,7 @@ end
 
 --// [DUPE ITEM]
 getgenv().DupeItem = function(itemName)
-    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
-        printDebug("AutoCollectModule ไม่พร้อม")
-        return false
-    end
-
+    local ToolEvent
     local ok1, ts = pcall(function() return ReplicatedStorage:WaitForChild("ToolStorage", 3) end)
     if not ok1 or not ts then
         printDebug("ToolStorage ไม่พบ")
@@ -110,7 +106,7 @@ getgenv().DupeItem = function(itemName)
         printDebug("ToolsStorage ไม่พบ")
         return false
     end
-    local ToolEvent = tss
+    ToolEvent = tss
 
     local function GetStorage()
         return LocalPlayer:FindFirstChild("storagetools")
@@ -195,10 +191,6 @@ end
 EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", function(input)
     if not input or input == "" then
         EO:Notify("EclipseOps", "❌ ระบุชื่อไอเท็ม! เช่น: dupe ส้มตำ", 3); return
-    end
-    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
-        EO:Notify("EclipseOps", "❌ CollectModule ยังไม่โหลด!", 4)
-        return
     end
     local eng, thai = findItem(input)
     if not eng then EO:Notify("EclipseOps", "❌ ไม่พบ: " .. input, 4); return end
