@@ -93,9 +93,15 @@ local function findItem(query)
     return nil, nil
 end
 
---// [DUPE ITEM]
+--// [DUPE ITEM — ปรับการแจ้งเตือน (ซ่อนรายละเอียด ใช้ printDebug)]
 getgenv().DupeItem = function(itemName)
-    local ToolEvent
+    -- ตรวจสอบว่ามี AutoCollectModule พร้อมใช้งาน
+    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
+        printDebug("AutoCollectModule ไม่พร้อม")
+        return false
+    end
+
+    -- ดึง Remote สำหรับ Save/Get
     local ok1, ts = pcall(function() return ReplicatedStorage:WaitForChild("ToolStorage", 3) end)
     if not ok1 or not ts then
         printDebug("ToolStorage ไม่พบ")
@@ -106,8 +112,9 @@ getgenv().DupeItem = function(itemName)
         printDebug("ToolsStorage ไม่พบ")
         return false
     end
-    ToolEvent = tss
+    local ToolEvent = tss
 
+    -- ฟังก์ชันช่วยเหลือ
     local function GetStorage()
         return LocalPlayer:FindFirstChild("storagetools")
     end
@@ -126,6 +133,7 @@ getgenv().DupeItem = function(itemName)
         return count
     end
 
+    -- รอ storagetools ถ้ายังไม่โหลด
     local storage = GetStorage()
     if not storage then
         local timeout = 0
@@ -140,30 +148,62 @@ getgenv().DupeItem = function(itemName)
         return false
     end
 
+    -- ตรวจพื้นที่ว่าง
     local free = GetFreeSlots(storage)
     if free == 0 then
         EO:Notify("EclipseOps", "❌ ช่องเก็บของเต็มแล้ว (10/10)", 3)
         return false
     end
 
-    printDebug("เริ่มดูป์ '" .. itemName .. "' " .. free .. " ชิ้น")
+    printDebug("เริ่มดูป์ '" .. itemName .. "' เป้าหมาย " .. free .. " ชิ้น")
 
+    -- ช่วงเก็บและ Save ไอเทมทีละชิ้น พร้อมระบบลองใหม่ถ้าไม่ติด
+    local savedCount = 0
     for i = 1, free do
-        pcall(function()
-            getgenv().AutoCollectModule.CollectItemByName(itemName)
-        end)
-        wait(0.25)
-        local char = LocalPlayer.Character
-        if char then
-            local tool = char:FindFirstChild(itemName)
-            if tool then tool.Parent = LocalPlayer.Backpack end
+        local saved = false
+        for attempt = 1, 3 do
+            -- เก็บไอเทมเข้าตัว
+            pcall(function()
+                getgenv().AutoCollectModule.CollectItemByName(itemName)
+            end)
+            wait(0.3)
+
+            -- ย้ายของจากมือเข้ากระเป๋า
+            local char = LocalPlayer.Character
+            if char then
+                local tool = char:FindFirstChild(itemName)
+                if tool then
+                    tool.Parent = LocalPlayer.Backpack
+                end
+            end
+
+            -- ยิง Save
+            pcall(function()
+                ToolEvent:FireServer("Save", itemName)
+            end)
+
+            -- รอคูลดาวน์ที่เพียงพอ
+            wait(0.5)
+
+            -- ตรวจว่าของเข้าสตอเรจจริงหรือไม่
+            local currentStorage = GetStorage()
+            if currentStorage then
+                local currentCount = GetTargetCount(currentStorage, itemName)
+                if currentCount > savedCount then
+                    savedCount = savedCount + 1
+                    saved = true
+                    break
+                end
+            end
+
+            wait(0.2) -- หน่วงก่อนลองใหม่
         end
-        pcall(function()
-            ToolEvent:FireServer("Save", itemName)
-        end)
-        wait(0.3)
+        if not saved then
+            printDebug("Save ชิ้นที่ " .. i .. " ไม่สำเร็จ")
+        end
     end
 
+    -- อัปเดต storage และนับจำนวนไอเทมเป้าหมายที่เซฟได้จริง
     storage = GetStorage()
     if not storage then
         printDebug("ไม่พบ storagetools หลัง Save")
@@ -176,11 +216,12 @@ getgenv().DupeItem = function(itemName)
         return false
     end
 
+    -- ดึงไอเทมเป้าหมายออกจาก storagetools จนหมด
     for i = 1, targetCount do
         pcall(function()
             ToolEvent:FireServer("Get", itemName)
         end)
-        wait(0.1)
+        wait(0.2) -- รอระหว่างการดึงแต่ละชิ้น
     end
 
     EO:Notify("EclipseOps", "✅ ดูป์ '" .. itemName .. "' สำเร็จ! ได้ " .. targetCount .. " ชิ้น 🎉", 4)
@@ -191,6 +232,12 @@ end
 EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", function(input)
     if not input or input == "" then
         EO:Notify("EclipseOps", "❌ ระบุชื่อไอเท็ม! เช่น: dupe ส้มตำ", 3); return
+    end
+    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
+        if not LoadCollectModule() then
+            EO:Notify("EclipseOps", "❌ CollectModule ยังไม่โหลด!", 4)
+            return
+        end
     end
     local eng, thai = findItem(input)
     if not eng then EO:Notify("EclipseOps", "❌ ไม่พบ: " .. input, 4); return end
