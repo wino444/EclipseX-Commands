@@ -76,7 +76,10 @@ local ItemDB = {
         { Eng = "CampingLantern",     Thai = "ตะเกียงแคมป์ปิ้ง", Price = "100" },
         { Eng = "Flashlight",         Thai = "ไฟฉาย",          Price = "100" },
         { Eng = "Axe",                Thai = "ขวาน",            Price = "100" },
-        { Eng = "PirateFlintockSword", Thai = "ดาบฟลินทล็อคโจรสลัด", Price = "500" }
+        { Eng = "PirateFlintockSword",Thai = "ดาบฟลินทล็อคโจรสลัด", Price = "500" },
+        { Eng = "Sign",               Thai = "ป้าย",            Price = "100" },
+        { Eng = "Rose",               Thai = "ดอกกุหลาบ",      Price = "5" },
+        { Eng = "High Five",          Thai = "ไฮไฟว์",          Price = "70" }
     }
 }
 
@@ -242,6 +245,65 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     local eng, thai = findItem(input)
     if not eng then EO:Notify("EclipseOps", "❌ ไม่พบ: " .. input, 4); return end
     coroutine.wrap(function() getgenv().DupeItem(eng) end)()
+end, EO.Ranks.Owner)
+
+--// [!spamtube] เปิด/ปิด ฟาร์มธูป + ทิ้งธูปอัตโนมัติ
+EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป", function()
+    -- ถ้ายังไม่มี CollectModuleCore ให้แจ้ง
+    local Collector = getgenv().CollectModuleCore
+    if not Collector then
+        EO:Notify("EclipseOps", "❌ ยังไม่โหลด CollectCore", 4)
+        return
+    end
+
+    -- เปิด/ปิด toggle
+    if getgenv().SpamTubeEnabled then
+        -- ปิดทั้งหมด
+        getgenv().SpamTubeEnabled = false
+        Collector:SetAutoCollectItem("Tube", false)  -- ปิด AutoCollect เฉพาะ Tube
+        EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
+    else
+        -- เปิดทั้งหมด
+        getgenv().SpamTubeEnabled = true
+        Collector:SetAutoCollectItem("Tube", true)   -- เปิด AutoCollect เฉพาะ Tube
+
+        -- ฟังก์ชันทิ้งธูปทั้งหมด
+        local function dropAllTube()
+            local char = LocalPlayer.Character
+            local bp = LocalPlayer:FindFirstChild("Backpack")
+
+            -- ทิ้งจาก Backpack
+            if bp then
+                for _, tool in pairs(bp:GetChildren()) do
+                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                        tool.Parent = workspace
+                    end
+                end
+            end
+
+            -- ทิ้งจากตัวละคร
+            if char then
+                for _, tool in pairs(char:GetChildren()) do
+                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                        tool.Parent = workspace
+                    end
+                end
+            end
+        end
+
+        -- เริ่มลูปออโต้ทิ้ง (ถ้ายังไม่มี)
+        if not getgenv()._SpamTubeThread then
+            getgenv()._SpamTubeThread = coroutine.wrap(function()
+                while getgenv().SpamTubeEnabled do
+                    dropAllTube()
+                    wait(0.1)
+                end
+            end)
+            getgenv()._SpamTubeThread()
+        end
+
+        EO:Notify("EclipseOps", "🌪️ เปิดฟาร์มธูป + ออโต้ทิ้งธูปแล้ว!", 3)
+    end
 end, EO.Ranks.Owner)
 
 print("[EclipseOps] ✅ TH2_CMDS3 (" .. (EO.CurrentBranch or "unknown"):upper() .. ") โหลดสำเร็จ!")
