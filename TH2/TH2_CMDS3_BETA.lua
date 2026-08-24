@@ -247,32 +247,23 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     coroutine.wrap(function() getgenv().DupeItem(eng) end)()
 end, EO.Ranks.Owner)
 
---// [!spamtube] เปิด/ปิด ฟาร์มธูป + ทิ้งธูปอัตโนมัติ
+--// [!spamtube] เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (ไม่ตรวจสอบ CollectModule)
 EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป", function()
-    -- ถ้ายังไม่มี CollectModuleCore ให้แจ้ง
-    local Collector = getgenv().CollectModuleCore
-    if not Collector then
-        EO:Notify("EclipseOps", "❌ ยังไม่โหลด CollectCore", 4)
-        return
-    end
-
-    -- เปิด/ปิด toggle
     if getgenv().SpamTubeEnabled then
         -- ปิดทั้งหมด
         getgenv().SpamTubeEnabled = false
-        Collector:SetAutoCollectItem("Tube", false)  -- ปิด AutoCollect เฉพาะ Tube
+        getgenv().CollectModuleCore:SetAutoCollectItem("Tube", false)
         EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
     else
         -- เปิดทั้งหมด
         getgenv().SpamTubeEnabled = true
-        Collector:SetAutoCollectItem("Tube", true)   -- เปิด AutoCollect เฉพาะ Tube
+        getgenv().CollectModuleCore:SetAutoCollectItem("Tube", true)
 
         -- ฟังก์ชันทิ้งธูปทั้งหมด
         local function dropAllTube()
             local char = LocalPlayer.Character
             local bp = LocalPlayer:FindFirstChild("Backpack")
 
-            -- ทิ้งจาก Backpack
             if bp then
                 for _, tool in pairs(bp:GetChildren()) do
                     if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
@@ -281,7 +272,6 @@ EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + อ
                 end
             end
 
-            -- ทิ้งจากตัวละคร
             if char then
                 for _, tool in pairs(char:GetChildren()) do
                     if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
