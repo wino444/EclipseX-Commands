@@ -50,10 +50,10 @@ Collector:RegisterCategory("🚗 Vehicles", {
 
 -- 🛕 หมวดของวัด
 Collector:RegisterCategory("🛕 Temple", {
-    { Name = "Tube",        Method = "fireclickdetector", Data = Vector3.new(490.306519, 176.16925, -51.2645264), RequiredTeam = "Citizen" },
-    { Name = "Folding Fan", Method = "fireclickdetector", Data = Vector3.new(565.241333, 175.982513, -33.4385223), RequiredTeam = "Citizen" },
-    { Name = "Bowl",        Method = "fireclickdetector", Data = Vector3.new(565.46759, 175.982513, -37.7505493), RequiredTeam = "Citizen" },
-    { Name = "Broom",       Method = "fireclickdetector", Data = Vector3.new(458.646027, 173.28302, -29.7921772), RequiredTeam = "Citizen" },
+    { Name = "Tube",        Method = "fireclickdetector", Data = CFrame.new(523.96106, 176.705063, -49.4984436, -0.0523990393, 0, -0.998626292, 0, 1, 0, 0.998626292, 0, -0.0523990393), RequiredTeam = "Citizen" },
+    { Name = "Folding Fan", Method = "fireclickdetector", Data = CFrame.new(598.896118, 176.518265, -31.6724224, -0.0523990393, 0, -0.998626292, 0, 1, 0, 0.998626292, 0, -0.0523990393), RequiredTeam = "Citizen" },
+    { Name = "Bowl",        Method = "fireclickdetector", Data = CFrame.new(599.122375, 176.518265, -35.9844627, -0.0523990393, 0, -0.998626292, 0, 1, 0, 0.998626292, 0, -0.0523990393), RequiredTeam = "Citizen" },
+    { Name = "Broom",       Method = "fireclickdetector", Data = CFrame.new(492.300507, 173.818863, -28.0260792, 0.0523988605, 0, 0.998626292, 0, 1, 0, -0.998626292, 0, 0.0523988605), RequiredTeam = "Citizen" },
 })
 
 -- 💡 หมวดไฟเวที
@@ -81,6 +81,9 @@ Collector:RegisterCategory("🛠️ Others", {
     { Name = "Flashlight",         Method = "fireclickdetector", Data = CFrame.new(-89.9848709, 176.894485, 206.213943, 1, 0, 0, 0, 1, 0, 0, 0, 1), RequiredTeam = "Citizen" },
     { Name = "Axe",                Method = "fireclickdetector", Data = CFrame.new(-93.7872849, 176.894485, 206.213943, 1, 0, 0, 0, 1, 0, 0, 0, 1), RequiredTeam = "Citizen" },
     { Name = "PirateFlintockSword",Method = "fireclickdetector", Data = CFrame.new(33.4809952, 153.846573, 136.378448, 0.970329344, -0, -0.241787016, 0, 1, -0, 0.241787016, 0, 0.970329344), RequiredTeam = "Citizen" },
+    { Name = "Sign",               Method = "fireclickdetector", Data = CFrame.new(89.4352951, 176.4534, 266.569397, 0, 0, 1, 0, 1, -0, -1, 0, 0), RequiredTeam = "Citizen" },
+    { Name = "Rose",               Method = "fireclickdetector", Data = CFrame.new(89.4352951, 176.470078, 246.651321, 0, 0, 1, 0, 1, -0, -1, 0, 0), RequiredTeam = "Citizen" },
+    { Name = "High Five",          Method = "fireclickdetector", Data = CFrame.new(89.4352951, 176.4534, 256.433594, 0, 0, 1, 0, 1, -0, -1, 0, 0), RequiredTeam = "Citizen" },
 })
 
 print("[TH2_Items] ✅ ลงทะเบียนไอเทมเมืองไทย2 ครบทุกหมวดหมู่แล้ว!")
