@@ -247,17 +247,23 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     coroutine.wrap(function() getgenv().DupeItem(eng) end)()
 end, EO.Ranks.Owner)
 
---// [!spamtube] เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (ไม่ตรวจสอบ CollectModule)
-EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป", function()
+--// [!spamtube] เปิด/ปิด ฟาร์มธูปแบบ SuperFast + ทิ้งธูปอัตโนมัติ
+EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (SuperFast)", function()
+    local Collector = getgenv().CollectModuleCore
+    if not Collector then
+        EO:Notify("EclipseOps", "❌ ยังไม่โหลด CollectCore", 4)
+        return
+    end
+
     if getgenv().SpamTubeEnabled then
         -- ปิดทั้งหมด
         getgenv().SpamTubeEnabled = false
-        getgenv().CollectModuleCore:SetAutoCollectItem("Tube", false)
+        Collector:SetSuperFastCollect("Tube", false)  -- ปิดโหมดเร็วสำหรับ Tube
         EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
     else
         -- เปิดทั้งหมด
         getgenv().SpamTubeEnabled = true
-        getgenv().CollectModuleCore:SetAutoCollectItem("Tube", true)
+        Collector:SetSuperFastCollect("Tube", true)   -- เปิดโหมดเร็วสุดสำหรับ Tube
 
         -- ฟังก์ชันทิ้งธูปทั้งหมด
         local function dropAllTube()
@@ -292,7 +298,7 @@ EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + อ
             getgenv()._SpamTubeThread()
         end
 
-        EO:Notify("EclipseOps", "🌪️ เปิดฟาร์มธูป + ออโต้ทิ้งธูปแล้ว!", 3)
+        EO:Notify("EclipseOps", "🌪️ เปิดฟาร์มธูป + ออโต้ทิ้งธูปแล้ว (SuperFast)!", 3)
     end
 end, EO.Ranks.Owner)
 
