@@ -247,99 +247,86 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     coroutine.wrap(function() getgenv().DupeItem(eng) end)()
 end, EO.Ranks.Owner)
 
---// [!spamtube] เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (รองรับทั้ง Core เก่า/ใหม่)
-EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (SuperFast)", function()
+--// [!droptube] เปิด/ปิด ออโต้ทิ้งธูป
+EO:AddCommand("droptube", "เปิด/ปิด ออโต้ทิ้งธูป", function()
+    if getgenv().DropTubeEnabled then
+        -- ปิด
+        getgenv().DropTubeEnabled = false
+        EO:Notify("EclipseOps", "🛑 ปิดออโต้ทิ้งธูปแล้ว", 3)
+    else
+        -- เปิด
+        getgenv().DropTubeEnabled = true
+
+        -- ฟังก์ชันทิ้งธูปทั้งหมด
+        local function dropAllTube()
+            local char = LocalPlayer.Character
+            local bp = LocalPlayer:FindFirstChild("Backpack")
+
+            if bp then
+                for _, tool in pairs(bp:GetChildren()) do
+                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                        tool.Parent = workspace
+                    end
+                end
+            end
+
+            if char then
+                for _, tool in pairs(char:GetChildren()) do
+                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                        tool.Parent = workspace
+                    end
+                end
+            end
+        end
+
+        -- เริ่มลูปทิ้ง (ถ้ายังไม่มี)
+        if not getgenv()._DropTubeThread then
+            getgenv()._DropTubeThread = coroutine.wrap(function()
+                while getgenv().DropTubeEnabled do
+                    dropAllTube()
+                    wait(0.1)
+                end
+            end)
+            getgenv()._DropTubeThread()
+        end
+
+        EO:Notify("EclipseOps", "🗑️ เปิดออโต้ทิ้งธูปแล้ว!", 3)
+    end
+end, EO.Ranks.Owner)
+
+--// [!autotube] เปิด/ปิด ออโต้เก็บธูป (SuperFast)
+EO:AddCommand("autotube", "เปิด/ปิด ออโต้เก็บธูป", function()
     local Collector = getgenv().CollectModuleCore
     if not Collector then
         EO:Notify("EclipseOps", "❌ ยังไม่โหลด CollectCore", 4)
         return
     end
 
-    -- ตัวแปรสำหรับ fallback super fast loop (ถ้า Core ไม่มี SetSuperFastCollect)
-    local superFastThreads = getgenv()._SuperFastThreads or {}
-    getgenv()._SuperFastThreads = superFastThreads
-    local superFastEnabled = getgenv()._SuperFastEnabled or {}
-    getgenv()._SuperFastEnabled = superFastEnabled
-
-    local function startFallbackSuperFast(itemName)
-        if superFastThreads[itemName] then return end
-        superFastThreads[itemName] = coroutine.wrap(function()
-            while superFastEnabled[itemName] do
-                pcall(function()
-                    Collector:CollectItemByName(itemName)
-                end)
-                RunService.Heartbeat:Wait() -- เร็วที่สุดโดยไม่รอคูลดาวน์
-            end
-        end)
-        superFastThreads[itemName]()
-    end
-
-    local function stopFallbackSuperFast(itemName)
-        superFastEnabled[itemName] = nil
-        superFastThreads[itemName] = nil
-    end
-
-    -- ทิ้งธูปทั้งหมด
-    local function dropAllTube()
-        local char = LocalPlayer.Character
-        local bp = LocalPlayer:FindFirstChild("Backpack")
-
-        if bp then
-            for _, tool in pairs(bp:GetChildren()) do
-                if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                    tool.Parent = workspace
-                end
-            end
-        end
-
-        if char then
-            for _, tool in pairs(char:GetChildren()) do
-                if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                    tool.Parent = workspace
-                end
-            end
-        end
-    end
-
-    if getgenv().SpamTubeEnabled then
-        -- ปิดทั้งหมด
-        getgenv().SpamTubeEnabled = false
-
-        -- ปิดโหมดเร็วจาก Core (ถ้ามี)
-        pcall(function() Collector:SetSuperFastCollect("Tube", false) end)
-        -- ปิด Fallback (ถ้าใช้)
-        stopFallbackSuperFast("Tube")
-        -- ปิด AutoCollect Tube (กันลืม)
+    if getgenv().AutoTubeEnabled then
+        -- ปิด
+        getgenv().AutoTubeEnabled = false
         pcall(function() Collector:SetAutoCollectItem("Tube", false) end)
-
-        EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
+        pcall(function() Collector:SetSuperFastCollect("Tube", false) end)
+        EO:Notify("EclipseOps", "🛑 ปิดออโต้เก็บธูปแล้ว", 3)
     else
-        -- เปิดทั้งหมด
-        getgenv().SpamTubeEnabled = true
-
-        -- เปิดโหมดเร็ว
+        -- เปิด
+        getgenv().AutoTubeEnabled = true
         if Collector.SetSuperFastCollect then
-            -- ใช้ฟีเจอร์ใหม่ (v2.1)
             pcall(function() Collector:SetSuperFastCollect("Tube", true) end)
         else
-            -- Fallback: เปิด AutoCollect + วนเก็บเร็วเอง
+            -- fallback ถ้า Core เก่า ไม่มี SetSuperFastCollect
             pcall(function() Collector:SetAutoCollectItem("Tube", true) end)
-            superFastEnabled["Tube"] = true
-            startFallbackSuperFast("Tube")
+            if not getgenv()._AutoTubeThread then
+                getgenv()._AutoTubeThread = coroutine.wrap(function()
+                    while getgenv().AutoTubeEnabled do
+                        pcall(function() Collector:CollectItemByName("Tube") end)
+                        game:GetService("RunService").Heartbeat:Wait()
+                    end
+                end)
+                getgenv()._AutoTubeThread()
+            end
         end
-
-        -- เริ่มลูปออโต้ทิ้งธูป (ถ้ายังไม่มี)
-        if not getgenv()._SpamTubeThread then
-            getgenv()._SpamTubeThread = coroutine.wrap(function()
-                while getgenv().SpamTubeEnabled do
-                    dropAllTube()
-                    wait(0.1)
-                end
-            end)
-            getgenv()._SpamTubeThread()
-        end
-
-        EO:Notify("EclipseOps", "🌪️ เปิดฟาร์มธูป + ออโต้ทิ้งธูปแล้ว (SuperFast)!", 3)
+        EO:Notify("EclipseOps", "🌾 เปิดออโต้เก็บธูปแล้ว!", 3)
     end
 end, EO.Ranks.Owner)
 
