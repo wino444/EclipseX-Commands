@@ -247,7 +247,7 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     coroutine.wrap(function() getgenv().DupeItem(eng) end)()
 end, EO.Ranks.Owner)
 
---// [!spamtube] เปิด/ปิด ฟาร์มธูปแบบ SuperFast + ทิ้งธูปอัตโนมัติ
+--// [!spamtube] เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (รองรับทั้ง Core เก่า/ใหม่)
 EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + ออโต้ทิ้งธูป (SuperFast)", function()
     local Collector = getgenv().CollectModuleCore
     if not Collector then
@@ -255,39 +255,80 @@ EO:AddCommand("spamtube", "เปิด/ปิด ฟาร์มธูป + อ
         return
     end
 
-    if getgenv().SpamTubeEnabled then
-        -- ปิดทั้งหมด
-        getgenv().SpamTubeEnabled = false
-        Collector:SetSuperFastCollect("Tube", false)  -- ปิดโหมดเร็วสำหรับ Tube
-        EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
-    else
-        -- เปิดทั้งหมด
-        getgenv().SpamTubeEnabled = true
-        Collector:SetSuperFastCollect("Tube", true)   -- เปิดโหมดเร็วสุดสำหรับ Tube
+    -- ตัวแปรสำหรับ fallback super fast loop (ถ้า Core ไม่มี SetSuperFastCollect)
+    local superFastThreads = getgenv()._SuperFastThreads or {}
+    getgenv()._SuperFastThreads = superFastThreads
+    local superFastEnabled = getgenv()._SuperFastEnabled or {}
+    getgenv()._SuperFastEnabled = superFastEnabled
 
-        -- ฟังก์ชันทิ้งธูปทั้งหมด
-        local function dropAllTube()
-            local char = LocalPlayer.Character
-            local bp = LocalPlayer:FindFirstChild("Backpack")
-
-            if bp then
-                for _, tool in pairs(bp:GetChildren()) do
-                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                        tool.Parent = workspace
-                    end
-                end
+    local function startFallbackSuperFast(itemName)
+        if superFastThreads[itemName] then return end
+        superFastThreads[itemName] = coroutine.wrap(function()
+            while superFastEnabled[itemName] do
+                pcall(function()
+                    Collector:CollectItemByName(itemName)
+                end)
+                RunService.Heartbeat:Wait() -- เร็วที่สุดโดยไม่รอคูลดาวน์
             end
+        end)
+        superFastThreads[itemName]()
+    end
 
-            if char then
-                for _, tool in pairs(char:GetChildren()) do
-                    if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                        tool.Parent = workspace
-                    end
+    local function stopFallbackSuperFast(itemName)
+        superFastEnabled[itemName] = nil
+        superFastThreads[itemName] = nil
+    end
+
+    -- ทิ้งธูปทั้งหมด
+    local function dropAllTube()
+        local char = LocalPlayer.Character
+        local bp = LocalPlayer:FindFirstChild("Backpack")
+
+        if bp then
+            for _, tool in pairs(bp:GetChildren()) do
+                if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                    tool.Parent = workspace
                 end
             end
         end
 
-        -- เริ่มลูปออโต้ทิ้ง (ถ้ายังไม่มี)
+        if char then
+            for _, tool in pairs(char:GetChildren()) do
+                if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
+                    tool.Parent = workspace
+                end
+            end
+        end
+    end
+
+    if getgenv().SpamTubeEnabled then
+        -- ปิดทั้งหมด
+        getgenv().SpamTubeEnabled = false
+
+        -- ปิดโหมดเร็วจาก Core (ถ้ามี)
+        pcall(function() Collector:SetSuperFastCollect("Tube", false) end)
+        -- ปิด Fallback (ถ้าใช้)
+        stopFallbackSuperFast("Tube")
+        -- ปิด AutoCollect Tube (กันลืม)
+        pcall(function() Collector:SetAutoCollectItem("Tube", false) end)
+
+        EO:Notify("EclipseOps", "🛑 ปิดฟาร์มธูป + หยุดทิ้งธูปแล้ว", 3)
+    else
+        -- เปิดทั้งหมด
+        getgenv().SpamTubeEnabled = true
+
+        -- เปิดโหมดเร็ว
+        if Collector.SetSuperFastCollect then
+            -- ใช้ฟีเจอร์ใหม่ (v2.1)
+            pcall(function() Collector:SetSuperFastCollect("Tube", true) end)
+        else
+            -- Fallback: เปิด AutoCollect + วนเก็บเร็วเอง
+            pcall(function() Collector:SetAutoCollectItem("Tube", true) end)
+            superFastEnabled["Tube"] = true
+            startFallbackSuperFast("Tube")
+        end
+
+        -- เริ่มลูปออโต้ทิ้งธูป (ถ้ายังไม่มี)
         if not getgenv()._SpamTubeThread then
             getgenv()._SpamTubeThread = coroutine.wrap(function()
                 while getgenv().SpamTubeEnabled do
