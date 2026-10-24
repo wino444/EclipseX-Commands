@@ -43,11 +43,11 @@ Collector:AddDecal("8979654359", "High Five", "Other")
 -- 🔵 Zone 1: จุดเกิด (Spawn) — 5 ไอเท็ม
 -- ═══════════════════════════════════════════════════════════
 Collector:RegisterCategory("Spawn", {
-	{ Name = "Sign",       Thai = "ป้าย",        Zone = "Spawn", Price = 100, Data = CFrame.new(89.4352951, 176.4534, 262.949463, 0, 0, 1, 0, 1, -0, -1, 0, 0) },
-	{ Name = "High Five",  Thai = "ไฮไฟว์",       Zone = "Spawn", Price = 70,  Data = CFrame.new(89.4352951, 176.4534, 257.418091, 0, 0, 1, 0, 1, -0, -1, 0, 0), DecalId = "8979654359" },
-	{ Name = "Fireflies",  Thai = "หิ่งห้อย",     Zone = "Spawn", Price = 12,  Data = CFrame.new(89.4352951, 176.4534, 243.022141, 0, 0, 1, 0, 1, -0, -1, 0, 0) },  -- 🔄 เปลี่ยนเป็นของ Boombox เดิม
-	{ Name = "Rose",       Thai = "ดอกกุหลาบ",   Zone = "Spawn", Price = 5,   Data = CFrame.new(89.4352951, 176.470078, 247.635803, 0, 0, 1, 0, 1, -0, -1, 0, 0), MeshId = "145815901" },
-	{ Name = "Boombox",    Thai = "บูมบ็อกซ์",    Zone = "Spawn", Price = 100, Data = CFrame.new(89.4352951, 176.4534, 252.473312, -1.1920929e-07, 0, 1.00000012, 0, 1, 0, -1.00000012, 0, -1.1920929e-07) },  -- 🔄 เปลี่ยนเป็นของ Fireflies เดิม
+    { Name = "Sign",       Thai = "ป้าย",        Zone = "Spawn", Price = 100, Data = CFrame.new(89.4352951, 176.4534, 262.949463, 0, 0, 1, 0, 1, -0, -1, 0, 0) },
+    { Name = "High Five",  Thai = "ไฮไฟว์",       Zone = "Spawn", Price = 70,  Data = CFrame.new(89.4352951, 176.4534, 257.418091, 0, 0, 1, 0, 1, -0, -1, 0, 0), DecalId = "8979654359" },
+    { Name = "Boombox",    Thai = "บูมบ็อกซ์",    Zone = "Spawn", Price = 100, Data = CFrame.new(89.4352951, 176.4534, 252.473312, -1.1920929e-07, 0, 1.00000012, 0, 1, 0, -1.00000012, 0, -1.1920929e-07) },  -- 🎵 Boombox
+    { Name = "Rose",       Thai = "ดอกกุหลาบ",   Zone = "Spawn", Price = 5,   Data = CFrame.new(89.4352951, 176.470078, 247.635803, 0, 0, 1, 0, 1, -0, -1, 0, 0), MeshId = "145815901" },
+    { Name = "Fireflies",  Thai = "หิ่งห้อย",     Zone = "Spawn", Price = 12,  Data = CFrame.new(89.4352951, 176.4534, 243.022141, 0, 0, 1, 0, 1, -0, -1, 0, 0) },  -- ✨ Fireflies
 })
 
 -- ═══════════════════════════════════════════════════════════
