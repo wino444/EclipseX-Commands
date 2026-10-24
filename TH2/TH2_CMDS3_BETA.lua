@@ -1,5 +1,6 @@
 --// 🌒 EclipseOps Command Module — เมืองไทย2 (TH2) STABLE (ชุดที่ 3)
 --// ย้ายคำสั่งดูป์มาไว้ที่นี่ เพื่อแยกความเสี่ยง
+--// 🔧 v2.1 — ไม่โหลด Collector เอง (CMDS1 โหลดให้แล้ว)
 
 local EO = getgenv().EclipseOps
 if not EO or not EO.CoreLoaded then
@@ -10,6 +11,7 @@ end
 --// [SERVICES]
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 --// [UTILS]
@@ -17,8 +19,20 @@ local function printDebug(...)
     if EO.EODebug then print("[TH2_CMDS3 DEBUG]", ...) end
 end
 
---// [ITEM DATABASE]
-local ItemDB = {
+--// [COLLECTOR CHECK — ไม่โหลดเอง, แค่ตรวจสอบ]
+local function EnsureCollector()
+    local C = getgenv().CollectModuleCore
+    if C then
+        if C.Probed then return C end
+        printDebug("Collector มี แต่ยังไม่ Probe")
+        return C
+    end
+    warn("[TH2_CMDS3] ❌ Collector ไม่พร้อม — ต้องโหลด TH2_CMDS1 ก่อน!")
+    return nil
+end
+
+--// [ITEM DATABASE — Fallback ถ้า Collector ไม่พร้อม]
+local ItemDBFallback = {
     Drink = {
         { Eng = "Bloxy Soda",       Thai = "บล็อกซี่โซดา", Price = "10" },
         { Eng = "Bottle of water",  Thai = "ขวดน้ำ",        Price = "10" },
@@ -83,9 +97,27 @@ local ItemDB = {
     }
 }
 
+--// [FIND ITEM — ใช้ Collector ก่อน, Fallback ถ้าไม่มี]
 local function findItem(query)
     query = string.lower(query)
-    for _, category in pairs(ItemDB) do
+    if not query or #query == 0 then return nil, nil end
+
+    -- 🥇 ลองใช้ Collector ก่อน
+    local C = getgenv().CollectModuleCore
+    if C and C.GetAllItems then
+        local all = C:GetAllItems()
+        for _, item in ipairs(all) do
+            local eng = item.Name or ""
+            local thai = item.Thai or eng
+            if string.find(string.lower(eng), query, 1, true)
+                or string.find(string.lower(thai), query, 1, true) then
+                return eng, thai
+            end
+        end
+    end
+
+    -- 🥈 Fallback: ItemDBFallback
+    for _, category in pairs(ItemDBFallback) do
         for _, item in ipairs(category) do
             if string.find(string.lower(item.Eng), query, 1, true)
                 or string.find(string.lower(item.Thai), query, 1, true) then
@@ -96,15 +128,20 @@ local function findItem(query)
     return nil, nil
 end
 
---// [DUPE ITEM — ปรับการแจ้งเตือน (ซ่อนรายละเอียด ใช้ printDebug)]
+--// ═══════════════════════════════════════════════════════════
+--// [DUPE ITEM]
+--// ═══════════════════════════════════════════════════════════
 getgenv().DupeItem = function(itemName)
-    -- ตรวจสอบว่ามี AutoCollectModule พร้อมใช้งาน
-    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
-        printDebug("AutoCollectModule ไม่พร้อม")
+    local C = EnsureCollector()
+    if not C or not C.CollectItemByName then
+        printDebug("Collector ไม่พร้อม")
+        return false
+    end
+    if not C.Probed then
+        printDebug("Collector ยังไม่ Probe")
         return false
     end
 
-    -- ดึง Remote สำหรับ Save/Get
     local ok1, ts = pcall(function() return ReplicatedStorage:WaitForChild("ToolStorage", 3) end)
     if not ok1 or not ts then
         printDebug("ToolStorage ไม่พบ")
@@ -117,7 +154,6 @@ getgenv().DupeItem = function(itemName)
     end
     local ToolEvent = tss
 
-    -- ฟังก์ชันช่วยเหลือ
     local function GetStorage()
         return LocalPlayer:FindFirstChild("storagetools")
     end
@@ -136,12 +172,11 @@ getgenv().DupeItem = function(itemName)
         return count
     end
 
-    -- รอ storagetools ถ้ายังไม่โหลด
     local storage = GetStorage()
     if not storage then
         local timeout = 0
         repeat
-            wait(0.2)
+            task.wait(0.2)
             storage = GetStorage()
             timeout += 0.2
         until storage or timeout >= 5
@@ -151,7 +186,6 @@ getgenv().DupeItem = function(itemName)
         return false
     end
 
-    -- ตรวจพื้นที่ว่าง
     local free = GetFreeSlots(storage)
     if free == 0 then
         EO:Notify("EclipseOps", "❌ ช่องเก็บของเต็มแล้ว (10/10)", 3)
@@ -160,18 +194,15 @@ getgenv().DupeItem = function(itemName)
 
     printDebug("เริ่มดูป์ '" .. itemName .. "' เป้าหมาย " .. free .. " ชิ้น")
 
-    -- ช่วงเก็บและ Save ไอเทมทีละชิ้น พร้อมระบบลองใหม่ถ้าไม่ติด
     local savedCount = 0
     for i = 1, free do
         local saved = false
         for attempt = 1, 3 do
-            -- เก็บไอเทมเข้าตัว
             pcall(function()
-                getgenv().AutoCollectModule.CollectItemByName(itemName)
+                C:CollectItemByName(itemName)
             end)
-            wait(0.3)
+            task.wait(0.3)
 
-            -- ย้ายของจากมือเข้ากระเป๋า
             local char = LocalPlayer.Character
             if char then
                 local tool = char:FindFirstChild(itemName)
@@ -180,15 +211,12 @@ getgenv().DupeItem = function(itemName)
                 end
             end
 
-            -- ยิง Save
             pcall(function()
                 ToolEvent:FireServer("Save", itemName)
             end)
 
-            -- รอคูลดาวน์ที่เพียงพอ
-            wait(0.5)
+            task.wait(0.5)
 
-            -- ตรวจว่าของเข้าสตอเรจจริงหรือไม่
             local currentStorage = GetStorage()
             if currentStorage then
                 local currentCount = GetTargetCount(currentStorage, itemName)
@@ -199,14 +227,13 @@ getgenv().DupeItem = function(itemName)
                 end
             end
 
-            wait(0.2) -- หน่วงก่อนลองใหม่
+            task.wait(0.2)
         end
         if not saved then
             printDebug("Save ชิ้นที่ " .. i .. " ไม่สำเร็จ")
         end
     end
 
-    -- อัปเดต storage และนับจำนวนไอเทมเป้าหมายที่เซฟได้จริง
     storage = GetStorage()
     if not storage then
         printDebug("ไม่พบ storagetools หลัง Save")
@@ -219,12 +246,11 @@ getgenv().DupeItem = function(itemName)
         return false
     end
 
-    -- ดึงไอเทมเป้าหมายออกจาก storagetools จนหมด
     for i = 1, targetCount do
         pcall(function()
             ToolEvent:FireServer("Get", itemName)
         end)
-        wait(0.2) -- รอระหว่างการดึงแต่ละชิ้น
+        task.wait(0.2)
     end
 
     EO:Notify("EclipseOps", "✅ ดูป์ '" .. itemName .. "' สำเร็จ! ได้ " .. targetCount .. " ชิ้น 🎉", 4)
@@ -236,28 +262,37 @@ EO:AddCommand("dupe", "ดูป์ของตามช่องว่าง", 
     if not input or input == "" then
         EO:Notify("EclipseOps", "❌ ระบุชื่อไอเท็ม! เช่น: dupe ส้มตำ", 3); return
     end
-    if not getgenv().AutoCollectModule or not getgenv().AutoCollectModule.CollectItemByName then
-        if not LoadCollectModule() then
-            EO:Notify("EclipseOps", "❌ CollectModule ยังไม่โหลด!", 4)
-            return
-        end
+
+    local C = EnsureCollector()
+    if not C or not C.Probed then
+        EO:Notify("EclipseOps", "❌ Collector ยังไม่พร้อม!\n(TH2_CMDS1 ต้องโหลดก่อน)", 4)
+        return
     end
+
     local eng, thai = findItem(input)
-    if not eng then EO:Notify("EclipseOps", "❌ ไม่พบ: " .. input, 4); return end
-    coroutine.wrap(function() getgenv().DupeItem(eng) end)()
+    if not eng then
+        EO:Notify("EclipseOps", "❌ ไม่พบ: " .. input, 4)
+        return
+    end
+
+    task.spawn(function()
+        getgenv().DupeItem(eng)
+    end)
 end, EO.Ranks.Owner)
 
---// [!droptube] เปิด/ปิด ออโต้ทิ้งธูป
+--// ═══════════════════════════════════════════════════════════
+--// [!droptube] ออโต้ทิ้งธูป
+--// ═══════════════════════════════════════════════════════════
+getgenv().DropTubeEnabled = false
+getgenv()._DropTubeThread = nil
+
 EO:AddCommand("droptube", "เปิด/ปิด ออโต้ทิ้งธูป", function()
     if getgenv().DropTubeEnabled then
-        -- ปิด
         getgenv().DropTubeEnabled = false
         EO:Notify("EclipseOps", "🛑 ปิดออโต้ทิ้งธูปแล้ว", 3)
     else
-        -- เปิด
         getgenv().DropTubeEnabled = true
 
-        -- ฟังก์ชันทิ้งธูปทั้งหมด
         local function dropAllTube()
             local char = LocalPlayer.Character
             local bp = LocalPlayer:FindFirstChild("Backpack")
@@ -265,7 +300,7 @@ EO:AddCommand("droptube", "เปิด/ปิด ออโต้ทิ้งธ
             if bp then
                 for _, tool in pairs(bp:GetChildren()) do
                     if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                        tool.Parent = workspace
+                        pcall(function() tool.Parent = workspace end)
                     end
                 end
             end
@@ -273,62 +308,70 @@ EO:AddCommand("droptube", "เปิด/ปิด ออโต้ทิ้งธ
             if char then
                 for _, tool in pairs(char:GetChildren()) do
                     if tool:IsA("Tool") and string.lower(tool.Name) == "tube" then
-                        tool.Parent = workspace
+                        pcall(function() tool.Parent = workspace end)
                     end
                 end
             end
         end
 
-        -- เริ่มลูปทิ้ง (ถ้ายังไม่มี)
         if not getgenv()._DropTubeThread then
-            getgenv()._DropTubeThread = coroutine.wrap(function()
+            getgenv()._DropTubeThread = task.spawn(function()
                 while getgenv().DropTubeEnabled do
-                    dropAllTube()
-                    wait(0.1)
+                    pcall(dropAllTube)
+                    task.wait(0.1)
                 end
+                getgenv()._DropTubeThread = nil
             end)
-            getgenv()._DropTubeThread()
         end
 
         EO:Notify("EclipseOps", "🗑️ เปิดออโต้ทิ้งธูปแล้ว!", 3)
     end
 end, EO.Ranks.Owner)
 
---// [!autotube] เปิด/ปิด ออโต้เก็บธูป (SuperFast)
+--// ═══════════════════════════════════════════════════════════
+--// [!autotube] ออโต้เก็บธูป
+--// ═══════════════════════════════════════════════════════════
+getgenv().AutoTubeEnabled = false
+getgenv()._AutoTubeThread = nil
+
 EO:AddCommand("autotube", "เปิด/ปิด ออโต้เก็บธูป", function()
-    local Collector = getgenv().CollectModuleCore
-    if not Collector then
-        EO:Notify("EclipseOps", "❌ ยังไม่โหลด CollectCore", 4)
+    local C = EnsureCollector()
+    if not C then
+        EO:Notify("EclipseOps", "❌ Collector ไม่พร้อม!\n(TH2_CMDS1 ต้องโหลดก่อน)", 4)
+        return
+    end
+
+    if not C.Probed then
+        EO:Notify("EclipseOps", "⏳ Collector ยัง Probe ไม่เสร็จ", 4)
         return
     end
 
     if getgenv().AutoTubeEnabled then
-        -- ปิด
         getgenv().AutoTubeEnabled = false
-        pcall(function() Collector:SetAutoCollectItem("Tube", false) end)
-        pcall(function() Collector:SetSuperFastCollect("Tube", false) end)
+        pcall(function() C:SetAutoCollectItem("Tube", false) end)
+        if getgenv()._AutoTubeThread then
+            getgenv()._AutoTubeThread = nil
+        end
         EO:Notify("EclipseOps", "🛑 ปิดออโต้เก็บธูปแล้ว", 3)
     else
-        -- เปิด
         getgenv().AutoTubeEnabled = true
-        if Collector.SetSuperFastCollect then
-            pcall(function() Collector:SetSuperFastCollect("Tube", true) end)
-        else
-            -- fallback ถ้า Core เก่า ไม่มี SetSuperFastCollect
-            pcall(function() Collector:SetAutoCollectItem("Tube", true) end)
+
+        local ok = pcall(function() C:SetAutoCollectItem("Tube", true) end)
+        if not ok then
             if not getgenv()._AutoTubeThread then
-                getgenv()._AutoTubeThread = coroutine.wrap(function()
+                getgenv()._AutoTubeThread = task.spawn(function()
                     while getgenv().AutoTubeEnabled do
-                        pcall(function() Collector:CollectItemByName("Tube") end)
-                        game:GetService("RunService").Heartbeat:Wait()
+                        pcall(function() C:CollectItemByName("Tube") end)
+                        RunService.Heartbeat:Wait()
                     end
+                    getgenv()._AutoTubeThread = nil
                 end)
-                getgenv()._AutoTubeThread()
             end
         end
+
         EO:Notify("EclipseOps", "🌾 เปิดออโต้เก็บธูปแล้ว!", 3)
     end
 end, EO.Ranks.Owner)
 
-print("[EclipseOps] ✅ TH2_CMDS3 (" .. (EO.CurrentBranch or "unknown"):upper() .. ") โหลดสำเร็จ!")
+print("[EclipseOps] ✅ TH2_CMDS3 v2.1 (" .. (EO.CurrentBranch or "unknown"):upper() .. ") โหลดสำเร็จ!")
 return true
